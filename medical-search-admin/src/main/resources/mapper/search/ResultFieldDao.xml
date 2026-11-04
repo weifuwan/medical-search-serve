@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.search.dao.ResultFieldDao">
+
+    <resultMap type="com.jiayuan.modules.search.entity.ResultFieldEntity" id="resultFieldMap">
+        <result property="id" column="id"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+    </resultMap>
+    <!-- 获取默认显示字段列表-->
+    <select id="getUserSaveFieldList" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        select fie.id            fieldId,
+               fie.field_name    fieldName,
+               fie.field_code    fieldCode,
+               fie.field_type      fieldType,
+               rf.sort           sort,
+               rf.is_default     isDefault,
+               rf.is_basic       isBasic,
+               rf.is_visit_basic isVisitBasic,
+               rf.is_dict        isDict,
+               rf.dict_type      dictType,
+               ta.id             tableId,
+               ta.table_code     tableCode,
+               ta.table_name     tableName,
+               ta.is_loop        isLoop,
+               ta.primary_code   primaryCode,
+               ta.slave_type     slaveType,
+               ta.related_field  relatedField,
+               ta.main_table_code mainTableCode,
+               rf.id             resultFieldId
+        from cbdses_result_field rf
+                 inner join cbdses_table ta on rf.table_code = ta.table_code
+                 inner join cbdses_table_field fie on (rf.field_code = fie.field_code and ta.id = fie.table_id)
+        where ta.is_deleted = 0
+          and fie.is_deleted = 0
+          and rf.user_id = #{userId}
+        order by rf.sort
+    </select>
+
+    <select id="getFieldList" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        select fie.id fieldId,
+        fie.field_name fieldName,
+        fie.field_code fieldCode,
+        fie.field_type fieldType,
+        ifnull(rf.sort, fie.sort) sort,
+        ifnull(rf.is_default, 0) isDefault,
+        ifnull(rf.is_basic, 0) isBasic,
+        ifnull(rf.is_visit_basic, 0) isVisitBasic,
+        rf.is_dict isDict,
+        rf.dict_type dictType,
+        ta.id tableId,
+        ta.table_code tableCode,
+        ta.table_name tableName,
+        ta.is_loop isLoop,
+        ta.primary_code primaryCode,
+        ta.slave_type slaveType,
+        ta.main_table_code mainTableCode
+        from cbdses_table ta
+        inner join cbdses_table_field fie on ta.id = fie.table_id
+        left join cbdses_result_field rf on rf.field_code = fie.field_code and rf.table_code = ta.table_code
+        where ta.is_deleted = 0 and fie.is_deleted = 0 and fie.id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        order by rf.sort
+    </select>
+
+    <!--获取默认配置字段列表-->
+    <select id="getDefaultShowFieldList" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        select fie.id            fieldId,
+               fie.field_name    fieldName,
+               fie.field_code    fieldCode,
+               fie.field_type    fieldType,
+               rf.sort           sort,
+               rf.is_default     isDefault,
+               rf.is_basic       isBasic,
+               rf.is_visit_basic isVisitBasic,
+               rf.is_dict        isDict,
+               rf.dict_type      dictType,
+               ta.id             tableId,
+               ta.table_code     tableCode,
+               ta.table_name     tableName,
+               ta.is_loop        isLoop,
+               ta.primary_code   primaryCode,
+               ta.slave_type     slaveType,
+               ta.related_field  relatedField,
+               rf.id             resultFieldId
+        from cbdses_result_field rf
+                 inner join cbdses_table ta on rf.table_code = ta.table_code
+                 inner join cbdses_table_field fie on (rf.field_code = fie.field_code and ta.id = fie.table_id)
+        where ta.is_deleted = 0
+          and fie.is_deleted = 0
+          and rf.is_default = 1
+        order by rf.sort
+    </select>
+
+    <!--获取需要更新的表头id-->
+    <select id="getNeedUpdateConfigIds" resultType="java.lang.Long">
+        SELECT id FROM cbdses_result_field WHERE CONCAT(table_code, '.', field_code) NOT IN
+        <foreach collection="tfCodeList" open="(" separator="," item="tfCode" close=")">
+            #{tfCode}
+        </foreach>
+    </select>
+
+
+</mapper>

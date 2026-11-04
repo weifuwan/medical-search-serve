@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.log.dao.SysLogOperationDao">
+
+    <!--操作日志清理-->
+    <select id="clearLog">
+        DELETE
+        FROM sys_log_operation
+        WHERE create_date <![CDATA[ <= ]]> #{date}
+    </select>
+</mapper>

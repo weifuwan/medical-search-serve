@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.sys.dao.SysUserDao">
+
+    <!-- 查询已存在的employment_id -->
+    <select id="findExistingEmploymentIds" resultType="java.lang.String">
+        SELECT employment_id FROM sys_user
+        WHERE sys_id = 'CBDSES' and employment_id IN
+        <foreach collection="employmentIds" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <!--用户批量更新-->
+    <insert id="batchInsertSysUser">
+        INSERT INTO sys_user
+        (user_id, login_id, password, user_name, gender, mobile, user_status, fg_admin, id_card, create_time, sys_id, modified_date, employment_id)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userId}, #{item.loginId}, #{item.password}, #{item.userName}, #{item.gender},
+            #{item.mobile}, 1, 0, #{item.idCard}, SYSDATE, #{item.sysId}, SYSDATE, #{item.employmentId})
+        </foreach>
+    </insert>
+</mapper>

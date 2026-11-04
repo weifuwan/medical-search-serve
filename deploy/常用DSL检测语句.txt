@@ -1,0 +1,21 @@
+
+# 检测表有没有写入
+GET /cdr_medical_search_all/_search
+{
+  "query": {
+    "nested": {
+      "path": "ms_visit_record",
+      "query": {
+        "match_all": {}
+      }
+    }
+  },
+ "_source": "ms_visit_record"
+}
+
+# 根据主键查询数据（X0011607就诊流水号）
+GET /cdr_medical_search_all/_doc/X0011607
+
+
+# 删除所有滚动id
+DELETE  /_search/scroll/_all

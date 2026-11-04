@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.search.dao.KeywordConfigDao">
+
+    <resultMap type="com.jiayuan.modules.search.entity.KeywordConfigEntity" id="keywordConfigMap">
+        <result property="id" column="id"/>
+        <result property="keyword" column="keyword"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+    </resultMap>
+
+    <select id="getDefaultSearchFieldList" resultType="com.jiayuan.modules.search.dto.KeywordConfigDTO">
+        select fie.id             fieldId,
+               fie.field_name     fieldName,
+               fie.field_code     fieldCode,
+               fie.field_type      fieldType,
+               fie.data_type      dataType,
+               mkc.id             id,
+               mkc.is_default     isDefault,
+               mkc.keyword        keyword,
+               mkc.keyword_type   keywordType,
+               mkc.is_convert     isConvert,
+               mkc.user_id        userId,
+               ta.id              tableId,
+               ta.table_code      tableCode,
+               ta.table_name      tableName,
+               ta.is_loop         isLoop,
+               ta.primary_code    primaryCode,
+               ta.slave_type      slaveType,
+               ta.related_field   relatedField,
+               ta.main_table_code mainTableCode
+        from cbdses_keyword_config mkc
+                 inner join cbdses_table ta on mkc.table_code = ta.table_code
+                 inner join cbdses_table_field fie on (mkc.field_code = fie.field_code and ta.id = fie.table_id)
+        where ta.is_deleted = 0
+          and ta.is_effective = 1
+          and fie.is_deleted = 0
+          and fie.is_effective = 1
+          and (mkc.is_default = 1 or mkc.user_id = #{userId})
+          and mkc.is_deleted = 0
+        order by mkc.create_date desc
+    </select>
+
+    <!--获取需要更新的配置ids-->
+    <select id="getNeedUpdateConfigIds" resultType="java.lang.Long">
+        SELECT id FROM cbdses_keyword_config WHERE CONCAT(table_code, '.', field_code) NOT IN
+        <foreach collection="tfCodeList" open="(" separator="," item="tfCode" close=")">
+            #{tfCode}
+        </foreach>
+    </select>
+
+
+</mapper>

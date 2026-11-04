@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.export.dao.ExportRecordFieldDao">
+
+    <resultMap type="com.jiayuan.modules.export.entity.ExportRecordFieldEntity" id="exportRecordFieldMap">
+        <result property="id" column="id"/>
+        <result property="exportId" column="export_id"/>
+        <result property="tableId" column="table_id"/>
+        <result property="tableFieldId" column="table_field_id"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="createDate" column="create_date"/>
+        <result property="updateDate" column="update_date"/>
+    </resultMap>
+
+    <select id="querySeniorTableHeader" resultType="com.jiayuan.modules.export.dto.SeniorExportRecordFieldDTO">
+        select t.id              tableId,
+               t.table_code      tableCode,
+               t.table_name      tableName,
+               t.is_loop         isLoop,
+               t.primary_code    primaryCode,
+               t.slave_type      slaveType,
+               t.main_table_code mainTableCode,
+               f.id              tableFieldId,
+               f.field_code      fieldCode,
+               f.field_name      fieldName,
+               f.field_type      fieldType,
+               m.id,
+               t.sort            tableSort,
+               f.sort            fieldSort
+        from cbdses_table t
+                 inner join cbdses_table_field f on t.id = f.table_id
+                 inner join cbdses_export_record_field m on f.id = m.table_field_id
+        where t.is_deleted = 0
+          and f.is_deleted = 0
+          and m.is_deleted = 0
+          and m.export_id = #{exportRecordId}
+        order by t.sort asc, f.sort asc
+    </select>
+
+    <select id="queryFieldContent" resultType="com.jiayuan.modules.export.dto.SeniorExportRecordFieldContentDTO">
+        select code,
+               name
+        from cbdses_export_record_field_content
+        where is_deleted = 0
+          and field_id = #{fieldId}
+    </select>
+
+</mapper>

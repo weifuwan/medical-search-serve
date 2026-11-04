@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 定义日志目录 -->
+    <property name="DEBUG_LOG_PATH" value="/usr/local/appLog/debug"/>
+    <property name="INFO_LOG_PATH" value="/usr/local/appLog/info"/>
+    <property name="WARN_LOG_PATH" value="/usr/local/appLog/warn"/>
+    <property name="ERROR_LOG_PATH" value="/usr/local/appLog/error"/>
+    <!-- 定义日志保留天数 -->
+    <property name="MAX_HISTORY" value="7"/>
+    <!-- 定义日志文件总大小 -->
+    <property name="TOTAL_SIZE_CAP" value="10GB"/>
+    <!-- 定义单个日志文件大小 -->
+    <property name="MAX_FILE_SIZE" value="50MB"/>
+
+    <!--日志输出到logstash-->
+    <!--    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">-->
+    <!--        <destination>192.168.10.110:4560</destination>-->
+    <!--        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">-->
+    <!--            <providers>-->
+    <!--                <timestamp>-->
+    <!--                    <timeZone>Asia/Shanghai</timeZone>-->
+    <!--                </timestamp>-->
+    <!--                &lt;!&ndash;自定义日志输出格式&ndash;&gt;-->
+    <!--                <pattern>-->
+    <!--                    <pattern>-->
+    <!--                        {-->
+    <!--                        "project": "medical-search-serve",-->
+    <!--                        "level": "%level",-->
+    <!--                        "pid": "${PID:-}",-->
+    <!--                        "thread": "%thread",-->
+    <!--                        "class": "%logger",-->
+    <!--                        "message": "%message",-->
+    <!--                        "stack_trace": "%exception{20}"-->
+    <!--                        }-->
+    <!--                    </pattern>-->
+    <!--                </pattern>-->
+    <!--            </providers>-->
+    <!--        </encoder>-->
+    <!--    </appender>-->
+
+
+    <!-- 输出到控制台 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 日志输出格式 -->
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}: %msg%n</pattern>
+            <!--日期 日志等级 PID 线程名 类路径 方法名 java源文件 行号 打印信息 换行-->
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%5p) %green(${PID:- }) - %magenta([%15.15t])
+               %cyan(%C.%M\(%F:%L\)) : %msg%n
+           </pattern> -->
+            <!-- 同上, 仅输出类路径, 不输出 方法名 java源文件 行号 -->
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%5p) %green(${PID:- }) - %magenta([%15.15t]) %cyan(%-40.40logger{40}) : %msg%n</pattern>-->
+        </encoder>
+    </appender>
+
+    <!-- 只输出DEBUG日志 -->
+    <appender name="DEBUG_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${DEBUG_LOG_PATH}/output.log</file>
+        <!-- 基于文件大小和时间的滚动策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${DEBUG_LOG_PATH}/output-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <!-- 日志文件保留天数 -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <!-- 日志归档文件总大小 -->
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <!-- 单个日志文件大小 -->
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <!--应用程序启动时，将删除所有过期的日志文件-->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}: %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!-- 日志过滤 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <!-- 指定日志级别 -->
+            <level>DEBUG</level>
+            <!-- 匹配则全部接受 -->
+            <onMatch>ACCEPT</onMatch>
+            <!-- 不匹配则全部拒绝 -->
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- 只输出INFO日志 -->
+    <appender name="INFO_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${INFO_LOG_PATH}/output.log</file>
+        <!-- 基于文件大小和时间的滚动策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${INFO_LOG_PATH}/output-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <!-- 日志文件保留天数 -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <!-- 日志归档文件总大小 -->
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <!-- 单个日志文件大小 -->
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <!--应用程序启动时，将删除所有过期的日志文件-->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}: %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!-- 日志过滤 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <!-- 指定日志级别 -->
+            <level>INFO</level>
+            <!-- 匹配则全部接受 -->
+            <onMatch>ACCEPT</onMatch>
+            <!-- 不匹配则全部拒绝 -->
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- 只输出WARN日志 -->
+    <appender name="WARN_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${WARN_LOG_PATH}/output.log</file>
+        <!-- 基于文件大小和时间的滚动策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${WARN_LOG_PATH}/output-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <!-- 日志文件保留天数 -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <!-- 日志归档文件总大小 -->
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <!-- 单个日志文件大小 -->
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <!--应用程序启动时，将删除所有过期的日志文件-->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}: %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!-- 日志过滤 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <!-- 指定日志级别 -->
+            <level>WARN</level>
+            <!-- 匹配则全部接受 -->
+            <onMatch>ACCEPT</onMatch>
+            <!-- 不匹配则全部拒绝 -->
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- 只输出ERROR日志 -->
+    <appender name="ERROR_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ERROR_LOG_PATH}/output.log</file>
+        <!-- 基于文件大小和时间的滚动策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ERROR_LOG_PATH}/output-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <!-- 日志文件保留天数 -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <!-- 日志归档文件总大小 -->
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <!-- 单个日志文件大小 -->
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <!--应用程序启动时，将删除所有过期的日志文件-->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}: %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!-- 日志过滤 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <!-- 指定日志级别 -->
+            <level>ERROR</level>
+            <!-- 匹配则全部接受 -->
+            <onMatch>ACCEPT</onMatch>
+            <!-- 不匹配则全部拒绝 -->
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+
+    <!-- 多环境配置 -->
+    <springProfile name="test,prod,zxyy,cdby,cdbytest,longchang">
+        <!-- root -->
+        <root level="INFO">
+            <appender-ref ref="INFO_LOG_FILE"/>
+            <appender-ref ref="ERROR_LOG_FILE"/>
+            <!-- <appender-ref ref="LOGSTASH"/>-->
+        </root>
+    </springProfile>
+
+    <!-- 多环境配置 -->
+    <springProfile name="dev,cdby,cdbytest,prod,longchang">
+        <!-- root -->
+        <root level="info">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+
+</configuration>

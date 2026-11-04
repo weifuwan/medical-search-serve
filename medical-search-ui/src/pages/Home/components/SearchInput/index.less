@@ -1,0 +1,88 @@
+@import url('../../../../global.less');
+
+.content {
+  text-align: center;
+  margin-top: 48px;
+
+  .searchConLarge {
+    .searchCon(790px, 55px)
+  }
+
+  .searchConSmall {
+    .searchCon(690px, 45px)
+  }
+
+  .searchCon(@mWidth, @mHeight) {
+    .searchInput {
+      width: @mWidth;
+      height: @mHeight;
+
+      div {
+        height: @mHeight;
+        border: 2px solid @primary-color;
+
+        span {
+          display: flex;
+          align-items: center;
+          font-size: 16px;
+        }
+      }
+
+      input {
+        height: @mHeight;
+      }
+
+    }
+
+    .searchUpdBtn {
+      .btn(16px 0 0 16px);
+    }
+
+    .searchBtn {
+      .btn(0 16px 16px 0);
+    }
+
+    .btn(@borderRadius) {
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      width: 100px;
+      height: @mHeight;
+      border-radius: @borderRadius;
+      background-color: @primary-color;
+    }
+  }
+
+  .searchActionCon {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    font-size: 16px;
+
+    .searchLargeAction {
+      .searchAction(890px, 12px)
+    }
+
+    .searchMiddleAction {
+      .searchAction(790px, 112px)
+    }
+
+    .searchSmallAction {
+      .searchAction(790px, 12px)
+    }
+
+    .searchAction(@mWidth, @marginWidth) {
+      width: 890px;
+      text-align: left;
+      margin-left: @marginWidth;
+      margin-bottom: 24px;
+
+      a {
+        font-size: 18px;
+        text-decoration: underline;
+        margin-right: 12px;
+        // font-weight: bold;
+      }
+    }
+  }
+}

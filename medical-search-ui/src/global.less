@@ -1,0 +1,189 @@
+@import '~antd/es/style/variable.less';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  text-rendering         : optimizeLegibility;
+  -webkit-font-smoothing : antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+.colorWeak {
+  filter: invert(80%);
+}
+
+// 页面 header 背景色
+.ant-page-header-ghost {
+  background-color: white;
+}
+
+/* 常用 flex */
+.flx-center {
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+}
+
+.flx-justify-between {
+  display        : flex;
+  align-items    : center;
+  justify-content: space-between;
+}
+
+.flx-justify-end {
+  display        : flex;
+  align-items    : center;
+  justify-content: flex-end;
+}
+
+.flx-align-center {
+  display    : flex;
+  align-items: center;
+}
+
+/* 水平垂直居中 */
+.grid-center {
+  display    : grid;
+  display    : -ms-grid; // 兼容 ie 10+
+  place-items: center;
+}
+
+/* 清除浮动 */
+.clearfix::after {
+  display : block;
+  height  : 0;
+  overflow: hidden;
+  clear   : both;
+  content : "";
+}
+
+/* 文字单行省略号 */
+.sle {
+  overflow     : hidden;
+  text-overflow: ellipsis;
+  white-space  : nowrap;
+}
+
+/* 文字多行省略号 */
+.mle {
+  display           : -webkit-box;
+  overflow          : hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 文字多了自動換行 */
+.break-word {
+  word-break: break-all;
+  word-wrap : break-word;
+}
+
+.ant-layout {
+  min-height: 100vh;
+}
+
+.ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
+  left: unset;
+}
+
+.ant-layout-header {
+  padding: 0 !important;
+}
+
+@backColor: linear-gradient(90deg, rgb(0, 153, 255) 0%, rgb(0, 153, 255) 0%, rgb(0, 204, 153) 48%, rgb(51, 204, 204) 100%, rgb(51, 204, 204) 100%);
+
+// 菜单背景色
+.ant-pro-top-nav-header {
+  background   : @backColor;
+  // background: @primary-color;
+}
+
+// 隐藏 header logo/title
+// .ant-pro-top-nav-header-main-left {
+//   display: none !important;
+// }
+
+// header title 颜色
+.ant-pro-top-nav-header-logo>*:first-child>h1 {
+  color    : white !important;
+  font-size: 20px;
+  padding  : 8px;
+}
+
+// 菜单样式
+.ant-pro-layout .ant-pro-top-nav-header-base-menu.ant-menu {
+  color      : white;
+  font-size  : 18px;
+  font-weight: bold;
+}
+
+// 鼠标悬停样式
+.ant-pro-layout .ant-pro-top-nav-header-base-menu.ant-menu-light .ant-menu-item:hover {
+  color: rgb(224, 226, 228);
+}
+
+// 选中菜单样式
+.ant-pro-layout .ant-pro-top-nav-header-base-menu.ant-menu-light .ant-menu-item-selected {
+  color        : white;
+  border-radius: 0;
+  border-bottom: 2px solid white;
+}
+
+.ant-pro-layout .ant-pro-top-nav-header-base-menu.ant-menu-light .ant-menu-item-selected:hover {
+  color        : rgb(37, 107, 214);
+  border-radius: 0;
+  border-bottom: 2px solid rgb(37, 107, 214);
+}
+
+// 此处用于首页搜索框 圆角
+.ant-input-group.ant-input-group-compact>*:first-child,
+.ant-input-group.ant-input-group-compact>.ant-select:first-child>.ant-select-selector,
+.ant-input-group.ant-input-group-compact>.ant-select-auto-complete:first-child .ant-input,
+.ant-input-group.ant-input-group-compact>.ant-cascader-picker:first-child .ant-input {
+  border-top-left-radius   : 16px !important;
+  border-bottom-left-radius: 16px !important;
+}
+
+@media (max-width: @screen-xs) {
+  .ant-table {
+    width     : 100%;
+    overflow-x: auto;
+
+    &-thead>tr,
+    &-tbody>tr {
+
+      >th,
+      >td {
+        white-space: pre;
+
+        >span {
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+.ant-pro-form-login-main {
+  width: auto !important;
+}
+
+// 隐藏设置悬浮按钮
+.ant-pro-setting-drawer-handle {
+  display: none;
+}
+
+// 覆盖表格同步的左右操作宽度样式
+.ant-pro-table-list-toolbar-left,
+.ant-pro-table-list-toolbar-right {
+  flex: none;
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.template.dao.TemplateFieldDao">
+
+    <resultMap type="com.jiayuan.modules.template.entity.TemplateFieldEntity" id="templateFieldMap">
+        <result property="id" column="id"/>
+        <result property="templateId" column="template_id"/>
+        <result property="fieldId" column="field_id"/>
+        <result property="fieldVal" column="field_val"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+        <result property="updater" column="updater"/>
+        <result property="updateDate" column="update_date"/>
+    </resultMap>
+
+    <!--获取需要更新的模板字段id-->
+    <select id="getNeedUpdateConfigIds" resultType="java.lang.Long">
+        SELECT id FROM cbdses_template_field WHERE CONCAT(table_code, '.', field_code) NOT IN
+        <foreach collection="tfCodeList" open="(" separator="," item="tfCode" close=")">
+            #{tfCode}
+        </foreach>
+    </select>
+
+    <!--获取模板字段列表-->
+    <select id="findList" resultType="com.jiayuan.modules.template.dto.TemplateFieldDTO">
+        select mtf.id,
+               mtf.template_id,
+               mtf.field_id,
+               mtf.field_val,
+               mtf.logic,
+               mtf.relation,
+               mtf.sort,
+               mtf.field_code,
+               mtf.table_code,
+               mt.table_name,
+               mt.is_loop isLoop,
+               mt.primary_code primaryCode,
+               mt.slave_type slaveType,
+               mt.related_field relatedField,
+               mt.main_table_code mainTableCode,
+               mtfi.field_name,
+               mtfi.data_type
+        from cbdses_template_field mtf
+                 left join cbdses_table mt on mt.table_code = mtf.table_code
+                 left join cbdses_table_field mtfi on mtfi.field_code = mtf.field_code and mtfi.table_id = mt.id
+        where template_id = #{templateId}
+    </select>
+
+
+</mapper>

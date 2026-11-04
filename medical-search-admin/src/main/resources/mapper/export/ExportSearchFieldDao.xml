@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.export.dao.ExportSearchFieldDao">
+
+    <resultMap type="com.jiayuan.modules.export.entity.ExportSearchFieldEntity" id="exportSearchFieldMap">
+        <result property="id" column="id"/>
+        <result property="saveRecordId" column="save_record_id"/>
+        <result property="isBasic" column="is_basic"/>
+        <result property="isVisitBasic" column="is_visit_basic"/>
+        <result property="isDict" column="is_dict"/>
+        <result property="dictType" column="dict_type"/>
+        <result property="sort" column="sort"/>
+        <result property="tableCode" column="table_code"/>
+        <result property="fieldCode" column="field_code"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="updater" column="updater"/>
+        <result property="updateDate" column="update_date"/>
+    </resultMap>
+
+
+    <!-- 获取数据保存关联显示字段列表-->
+    <select id="findList" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        select fie.id              fieldId,
+               fie.field_name      fieldName,
+               fie.field_code      fieldCode,
+               fie.field_type      fieldType,
+               fie.is_show         isShow,
+               mesf.sort           sort,
+               mesf.is_basic       isBasic,
+               mesf.is_visit_basic isVisitBasic,
+               mesf.is_dict        isDict,
+               mesf.dict_type      dictType,
+               ta.id               tableId,
+               ta.table_code       tableCode,
+               ta.table_name       tableName,
+               ta.is_loop          isLoop,
+               ta.primary_code     primaryCode,
+               ta.slave_type       slaveType,
+               ta.related_field    relatedField,
+               ta.main_table_code  mainTableCode,
+               mesf.id             resultFieldId
+        from cbdses_export_search_field mesf
+                 inner join cbdses_table ta on mesf.table_code = ta.table_code
+                 inner join cbdses_table_field fie on (mesf.field_code = fie.field_code and ta.id = fie.table_id)
+        where ta.is_deleted = 0
+          and fie.is_deleted = 0
+          and mesf.save_record_id = #{saveRecordId}
+        order by mesf.sort
+    </select>
+
+</mapper>

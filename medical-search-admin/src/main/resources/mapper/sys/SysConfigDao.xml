@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.sys.dao.SysConfigDao">
+
+    <resultMap type="com.jiayuan.modules.sys.entity.SysConfigEntity" id="sysConfigMap">
+        <result property="id" column="id"/>
+        <result property="moduleId" column="module_id"/>
+        <result property="configCode" column="config_code"/>
+        <result property="configName" column="config_name"/>
+        <result property="description" column="description"/>
+        <result property="configValue" column="config_value"/>
+        <result property="configType" column="config_type"/>
+        <result property="sortCode" column="sort_code"/>
+        <result property="deletedFlag" column="deleted_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="sysId" column="sys_id"/>
+        <result property="webShow" column="web_show"/>
+        <result property="moduleName" column="module_name"/>
+    </resultMap>
+
+
+</mapper>

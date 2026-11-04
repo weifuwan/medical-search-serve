@@ -1,0 +1,33 @@
+# Build and package outputs
+target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+*.jar
+*.zip
+*.tar.gz
+dependency-reduced-pom.xml
+
+# Editor and OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Local runtime, logs and secrets
+/logs/
+*.log
+hs_err_pid*
+.attach_pid*
+.env
+.env.*
+*.keytab
+work_dir/
+metastore_db/
+
+# Temporary work
+.stage*
+*.py[cod]
+deploy/nginx.tar

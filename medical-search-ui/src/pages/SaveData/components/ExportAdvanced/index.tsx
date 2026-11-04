@@ -1,0 +1,402 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Input, Transfer, Tree, Space, Button, Spin, message, notification } from 'antd';
+import { difference } from 'lodash';
+import { getTreeListData } from '@/services/home/api'
+import { seniorExport, getExportFields } from '@/services/saveData/api'
+import type { TransferItem } from 'antd/es/transfer';
+import type { DataNode } from 'antd/es/tree';
+
+import ExportETable, { DataSourceType } from './ExportETable'
+import ExportResultPreview from './ExportResultPreview';
+import './index.less'
+import { exportFun } from '@/utils';
+import { ProForm, ProFormInstance, ProFormRadio, ProFormSelect } from '@ant-design/pro-components';
+import { getPageClassify } from '@/services/fieldManage/table';
+
+const { Search } = Input
+
+interface ExportAdvancedProps {
+    id: string | number;
+    fileName: string;
+    handleFinish: () => void;
+}
+
+// 重新格式化 tree
+const generateTree = (treeNodes: DataNode[] = [], checkedKeys: string[] = []): DataNode[] =>
+    treeNodes.map(({ children, ...props }) => ({
+        ...props,
+        disabled: checkedKeys.includes(props.key as string),
+        children: generateTree(children, checkedKeys),
+    }))
+
+const ExportAdvanced: React.FC<ExportAdvancedProps> = (props) => {
+    const { id, fileName, handleFinish } = props
+    const formRef = useRef<ProFormInstance>()
+    const childRef = useRef()
+    const [importAmount, setImportAmount] = useState(-1)
+    const [classifyId, setClassifyId] = useState('')
+    const [searchType, setSearchType] = useState(2)
+    const [searchName, setSearchName] = useState('')
+    const [saveTransferData, setSaveTransferData] = useState<TransferItem[]>([])
+    const [transferData, setTransferData] = useState<TransferItem[]>([])
+    const [saveTreeData, setSaveTreeData] = useState<HOMEAPI.TreeItemType[]>([])
+    const [treeData, setTreeData] = useState<HOMEAPI.TreeItemType[]>([])
+    const [pageClassifyData, setPageClassifyData] = useState<API.CommonSelectType[]>([])
+    const [targetKeys, setTargetKeys] = useState<string[]>([])
+    const [editableRowKeys, setEditableRowKeys] = useState<React.Key[]>([])// 表格编辑状态的 key
+    const [alreadyTableData, setAlreadyTableData] = useState<DataSourceType[]>([])// 已经选择的数据
+    const [reqParams, setReqParams] = useState<SAVEDATAAPI.SeniorExport>()
+    const [pageLoading, setPageLoading] = useState(false)
+    const [isShowPreview, setIsShowPreview] = useState(false)
+    const [saveLoading, setSaveLoading] = useState(false)
+    const transferDataSource: TransferItem[] = []
+    const transferDataSource1: TransferItem[] = []
+
+    // 得到 Transfer 的 ALL 数据
+    const flatten = (list: DataNode[] = []) => {
+        list.forEach(item => {
+            transferDataSource.push(item as TransferItem)
+            flatten(item.children)
+        })
+        return transferDataSource
+    }
+    // 得到 Transfer 的 ALL 数据
+    const flatten1 = (list: DataNode[] = []) => {
+        list.forEach(item => {
+            transferDataSource1.push(item as TransferItem)
+            flatten1(item.children)
+        })
+        return transferDataSource1
+    }
+
+    // 获取 分类 数据
+    const handlePageClassify = async () => {
+        const { code, data } = await getPageClassify({ page: 1, limit: 50 })
+        if (!code) {
+            const list = data.list.map((item: { name: string, id: string }) => ({
+                label: item.name,
+                value: item.id
+            }))
+            setPageClassifyData(list)
+            handleTreeList('', '')
+        }
+    }
+
+    // 获取 tree 数据
+    const handleTreeList = async (tableName: string, classifyIdVal: string) => {
+        const paramsData = {
+            classifyId: classifyIdVal,
+            keyword: tableName,
+            type: searchType
+        }
+        setPageLoading(true)
+        const data = await getTreeListData(paramsData, ['tableName', 'tableCode', 'fieldList', 'fieldName', 'id'])
+        setTreeData(data)
+        setTransferData(flatten(data))
+        if (!saveTransferData.length) {
+            setSaveTreeData(data)
+            setSaveTransferData(flatten1(data))
+            handleExportFields()
+        }
+        setPageLoading(false)
+    }
+
+    // 表单数据变化时
+    const formChange = (e: any) => {
+        if (e && e['type']) {
+            const typeVal = e['type']
+            setSearchType(typeVal)
+            return
+        }
+
+        const classifyIdVal = formRef.current?.getFieldValue('classifyId')
+        setClassifyId(classifyIdVal)
+        setSearchName('')
+        handleTreeList('', classifyIdVal)
+    }
+
+    // tree 搜索
+    const handleSearch = (val: string) => {
+        handleTreeList(val, classifyId)
+    }
+
+    // tree 搜索 change
+    const searchValChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchName(e.target.value)
+    }
+
+    /**
+ * 获取 高级导出字段列表
+ * @param
+ */
+    const handleExportFields = async () => {
+        const { code, data } = await getExportFields({ saveDataId: id })
+        if (code === 0) {
+            setAlreadyTableData(data.map((item: SAVEDATAAPI.SeniorExportItem) => ({
+                ...item,
+                fieldId: item.fieldId,
+                tableName: item.tableName,
+                fieldName: item.fieldName,
+                fieldContentDTOList: item.val
+            })))
+            const keys = data.map((item: SAVEDATAAPI.SeniorExportItem) => item.fieldId)
+            setTargetKeys(keys)
+            setEditableRowKeys(keys)
+        }
+    }
+
+    // 打开通知
+    let keyIndex = 0
+    // const key = 'importNoticeKey'
+    const openNotification = (key: any) => {
+        let minute = ''
+        if (importAmount > 0 && importAmount <= 5000) {
+            minute = '1'
+        } else if (importAmount > 5000 && importAmount < 10000) {
+            minute = '2'
+        } else {
+            minute = '3~5'
+        }
+        const args = {
+            // key,
+            message: '导出提示',
+            description: '导出预计耗时' + minute + '分钟，前往导出记录中查看并下载',
+            duration: 0,
+            stack: {
+                threshold: 3
+            }
+        }
+        notification.info(args)
+    }
+
+    // 高级导出
+    const handleSeniorExport = async (reqData: SAVEDATAAPI.SeniorExport) => {
+        const { code } = await seniorExport(reqData)
+
+        if (code === 0) {
+            keyIndex++
+            openNotification(keyIndex)
+            message.success('成功')
+            handleFinish()
+            setSaveLoading(false)
+        }
+    }
+
+    //（点击事件）
+    const actionClick = (num: number) => {
+        const cRef: any = childRef?.current
+        cRef?.getTableData().then((tableValues: SAVEDATAAPI.SeniorExportItem[]) => {
+            const reqData = {
+                id: id,
+                fieldDTOList: tableValues?.map((item, index) => {
+                    item.fieldContentDTOList = Array.isArray(item.fieldContentDTOList) ?
+                        (item.fieldContentDTOList?.map(child => (
+                            {
+                                code: child.key,
+                                name: child.title
+                            }
+                        )))
+                        :
+                        item.fieldContentDTOList ?
+                            [
+                                {
+                                    code: '',
+                                    name: item.fieldContentDTOList
+                                }
+                            ]
+                            :
+                            []
+                    item.fieldSort = index
+                    item.fieldCode = item.fieldCode
+                    item.tableFieldId = item.fieldId
+                    item.tableSort = item.tableSort ? item.tableSort : getTreeNodeInfo(item.fieldId, saveTreeData)['sort']
+                    item.tableId = item.tableId ? item.tableId : getTreeNodeInfo(item.fieldId, saveTreeData)['id']
+                    item.tableCode = item.tableCode ? item.tableCode : getTreeNodeInfo(item.fieldId, saveTreeData)['tableCode']
+                    item.tableName = item.tableName ? item.tableName : getTreeNodeInfo(item.fieldId, saveTreeData)['tableName']
+                    return item
+                })
+            }
+            switch (num) {
+                case 1:// 预览导出结果
+                    setReqParams(reqData)
+                    setIsShowPreview(true)
+                    break;
+                default:// 确认导出
+                    setSaveLoading(true)
+                    handleSeniorExport(reqData)
+                    break;
+            }
+        })
+    }
+
+    // 穿梭框回调
+    const onChange = (keys: string[]) => {
+        // if (keys.length <= 100) {
+        const list: DataSourceType[] = []
+        const keyList = [...new Set(keys)]
+
+        keyList.forEach(item => {
+            const arr = alreadyTableData.filter(children => item === children.fieldId)
+            if (arr.length > 0) {
+                list.push(arr[0])
+            } else {
+                saveTransferData.forEach((child: TransferItem) => {
+                    if (item === child.key && item !== (saveTreeData?.filter(children => children.key === item)[0]?.key)) {
+                        list.push({
+                            ...child,
+                            fieldId: child.key as React.Key,
+                            tableName: getTreeNodeInfo(child.key!, saveTreeData)['title'],
+                            fieldName: child.title,
+                        })
+                    }
+                })
+            }
+        })
+        setTargetKeys(keyList)
+        setEditableRowKeys(keyList)
+        setAlreadyTableData(list)
+        // } else {
+        //     message.error('一次最多选100个字段')
+        // }
+    }
+
+    // 编辑表格回调（删除、字段内容选择）
+    const handleChange = (data: DataSourceType[]) => {
+        if (!data.length) setIsShowPreview(false)
+        const keys = data.map(item => (item.fieldId)) as string[]
+        setTargetKeys(keys)
+        setAlreadyTableData(data)// 已经选择的数据
+    }
+
+    // 根据当前 tree key 获取 item 节点信息
+    const getTreeNodeInfo = (key: string | number, list: HOMEAPI.TreeItemType[], isChild?: boolean) => {
+        let nodeObj = {}
+        list.forEach(item => {
+            item.children?.forEach(child => {
+                if (key === child.key) {
+                    nodeObj = isChild ? { ...child } : { ...item }
+                }
+            })
+        })
+
+        return nodeObj as SAVEDATAAPI.SeniorExportItem
+    }
+    useEffect(() => {
+        handlePageClassify()
+    }, [])
+
+    return (
+        <Spin spinning={pageLoading}>
+            <Transfer
+                className="export-advanced-transfer"
+                dataSource={transferData}
+                targetKeys={targetKeys}
+                render={item => item.title!}
+                showSelectAll={false}
+                onChange={onChange}
+                selectAllLabels={[<span>{targetKeys.length}/{saveTransferData.length}项</span>, <span>{targetKeys.length}项（提示：当某表下的字段全部选中时项数会包括当前表名项，但不显示）</span>]}
+                titles={[<h4>选择字段</h4>, <h4>已选择结果</h4>]}
+                oneWay
+            >
+                {
+                    ({ direction, selectedKeys, onItemSelectAll, onItemSelect, filteredItems }) => {
+                        if (direction === 'left') {
+                            const checkedKeys = [...selectedKeys, ...targetKeys]
+                            return (
+                                <>
+                                    <ProForm
+                                        style={{ margin: '12px 4px 0 12px' }}
+                                        formRef={formRef}
+                                        layout="horizontal"
+                                        submitter={false}
+                                        onValuesChange={formChange}
+                                    >
+                                        <ProFormSelect
+                                            name="classifyId"
+                                            label="分类"
+                                            showSearch
+                                            placeholder="请选择"
+                                            options={pageClassifyData}
+                                        />
+                                        <ProFormRadio.Group
+                                            name="type"
+                                            label="类型："
+                                            fieldProps={{ defaultValue: 2 }}
+                                            options={[
+                                                {
+                                                    label: '关键词',
+                                                    value: 2,
+                                                },
+                                                {
+                                                    label: '数据集',
+                                                    value: 1,
+                                                },
+                                            ]}
+                                        />
+                                    </ProForm>
+                                    <Search
+                                        allowClear
+                                        value={searchName}
+                                        style={{ width: '95%', margin: '4px 12px 12px 12px' }}
+                                        placeholder="请输入名称进行搜索"
+                                        onSearch={handleSearch}
+                                        onChange={searchValChange}
+                                    />
+                                    <Tree
+                                        checkable
+                                        blockNode
+                                        height={420}
+                                        defaultExpandAll
+                                        checkedKeys={checkedKeys}
+                                        treeData={generateTree(treeData, targetKeys)}
+                                        onCheck={(_, { node: { key, checked } }) => {
+                                            const fatherList = treeData.filter(item => key === item.key)
+                                            const isCheck = !checked
+                                            // if (fatherList.length > 0) {
+                                            const keys = _ as string[]
+                                            const diffKeys = isCheck
+                                                ? difference(keys, selectedKeys)
+                                                : difference(selectedKeys, keys)
+
+                                            onItemSelectAll(diffKeys as string[], isCheck)
+                                            // } else {
+                                            //     onItemSelect(key as string, isCheck);
+                                            // }
+                                        }}
+                                    />
+                                </>
+                            )
+                        }
+                        if (direction === 'right' && alreadyTableData.length > 0) {
+                            return (
+                                <ExportETable
+                                    ref={childRef}
+                                    eTableData={alreadyTableData}
+                                    editableKeys={editableRowKeys}
+                                    handleChange={handleChange}
+                                />
+                            )
+                        }
+                    }
+                }
+            </Transfer>
+
+            <div className='export-high-footer'>
+                <Space size="large">
+                    {/* <Button onClick={() => actionClick(1)}>
+                        预览导出结果
+                    </Button> */}
+                    <Button type="primary" loading={saveLoading} onClick={() => actionClick(2)}>
+                        确认导出
+                    </Button>
+                </Space>
+            </div>
+            {
+                isShowPreview &&
+                <ExportResultPreview previewParams={reqParams!} handleReturnTotal={(total) => setImportAmount(total)} />
+            }
+        </Spin>
+    )
+}
+
+export default ExportAdvanced;

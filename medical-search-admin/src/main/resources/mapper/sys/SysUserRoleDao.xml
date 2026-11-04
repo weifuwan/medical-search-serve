@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.sys.dao.SysUserRoleDao">
+
+    <delete id="deleteByRoleIds">
+        delete from sys_user_role where sys_id = 'CBDSES' and role_id in
+        <foreach item="roleId" collection="array" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteByUserIds">
+        delete from sys_user_role where sys_id = 'CBDSES' and user_id in
+        <foreach item="userId" collection="array" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </delete>
+
+    <select id="getRoleList" resultType="com.jiayuan.modules.sys.dto.KeyValueDTO">
+        select r.role_id as id, r.role_name as name
+        from sys_role r
+                 inner join sys_user_role u on r.role_id = u.role_id
+        where u.user_id = #{value}
+        and r.sys_id = 'CBDSES'
+    </select>
+
+</mapper>

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.template.dao.TableFieldDao">
+
+    <resultMap type="com.jiayuan.modules.template.entity.TableFieldEntity" id="fieldMap">
+        <result property="id" column="id"/>
+        <result property="fieldName" column="field_name"/>
+        <result property="fieldCode" column="field_code"/>
+        <result property="tableId" column="table_id"/>
+        <result property="sort" column="sort"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+        <result property="updater" column="updater"/>
+        <result property="updateDate" column="update_date"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+    <update id="switchShowStatus">
+        update cbdses_table_field
+        set is_show = #{isShow}
+        where table_code = #{tableCode}
+          and field_code = #{fieldCode}
+    </update>
+
+    <!--删除-->
+    <delete id="deleteAll">
+        delete
+        from cbdses_table_field
+        where table_code != #{cbdsesVisitRecord}
+    </delete>
+
+    <!-- 获取字段列表-->
+    <select id="getField" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        SELECT
+        ta.id tableId,
+        ta.table_name tableName,
+        ta.table_code tableCode,
+        ta.is_loop isLoop,
+        ta.primary_code primaryCode,
+        ta.slave_type slaveType,
+        ta.related_field relatedField,
+        ta.main_table_code mainTableCode,
+        fi.id fieldId,
+        fi.field_name fieldName,
+        fi.field_code fieldCode,
+        fi.field_type fieldType,
+        fi.data_type dataType,
+        fi.is_show isShow
+        FROM cbdses_table ta
+        inner join cbdses_table_field fi on ta.id = fi.table_id
+        <where>
+            <if test="tableName != null and tableName != ''">
+                and ta.table_name = #{tableName}
+            </if>
+            and fi.field_name = #{fieldName}
+            and ta.is_deleted = 0
+            and ta.is_effective = 1
+            and fi.is_deleted = 0
+            and fi.is_effective = 1
+        </where>
+    </select>
+
+    <!--获取字段列表-->
+    <select id="getFieldListByFieldIds" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        SELECT ta.id tableId,
+        ta.table_name tableName,
+        ta.table_code tableCode,
+        ta.is_loop isLoop,
+        ta.primary_code primaryCode,
+        ta.slave_type slaveType,
+        ta.related_field relatedField,
+        ta.main_table_code mainTableCode,
+        fi.id fieldId,
+        fi.field_name fieldName,
+        fi.field_code fieldCode,
+        fi.field_type fieldType,
+        fi.data_type dataType
+        FROM cbdses_table ta
+        inner join cbdses_table_field fi on ta.id = fi.table_id
+        where fi.id in
+        <foreach collection="fieldIds" item="el" open="(" close=")" separator=",">
+            #{el}
+        </foreach>
+    </select>
+
+    <!--获取主表字段列表-->
+    <select id="getPrimaryFieldList" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        SELECT ta.id tableId,
+        ta.table_name tableName,
+        ta.table_code tableCode,
+        ta.is_loop isLoop,
+        ta.primary_code primaryCode,
+        ta.slave_type slaveType,
+        ta.related_field relatedField,
+        ta.main_table_code mainTableCode,
+        fi.id fieldId,
+        fi.field_name fieldName,
+        fi.field_code fieldCode,
+        fi.field_type fieldType
+        FROM cbdses_table ta
+        inner join cbdses_table_field fi on ta.id = fi.table_id
+        where ta.id in
+        <foreach collection="tableIds" item="el" open="(" close=")" separator=",">
+            #{el}
+        </foreach>
+        and fi.field_type = 1
+
+    </select>
+    <select id="getFieldListByCodes" resultType="com.jiayuan.modules.template.dto.FieldDTO">
+        SELECT ta.id tableId,
+        ta.table_name tableName,
+        ta.table_code tableCode,
+        ta.is_loop isLoop,
+        ta.primary_code primaryCode,
+        ta.slave_type slaveType,
+        ta.related_field relatedField,
+        ta.main_table_code mainTableCode,
+        fi.id fieldId,
+        fi.field_name fieldName,
+        fi.field_code fieldCode,
+        fi.field_type fieldType,
+        fi.data_type dataType
+        FROM cbdses_table ta
+        INNER JOIN cbdses_table_field fi ON ta.id = fi.table_id
+        WHERE
+        <foreach collection="codePairs" item="pair" open="(" close=")" separator=" OR ">
+            (ta.table_code = #{pair.tableCode} AND fi.field_code = #{pair.fieldCode})
+        </foreach>
+    </select>
+    <select id="getShowFieldsByTableId" resultType="com.jiayuan.modules.template.dto.FieldDTO"
+            parameterType="java.lang.String">
+        select fi.id         fieldId,
+               fi.field_name fieldName,
+               fi.field_code fieldCode,
+               fi.field_type fieldType,
+               fi.data_type  dataType,
+               fi.table_code tableCode
+        from cbdses_table_field fi
+        where fi.is_show = 1
+          and fi.table_code = #{tableCode}
+        order by fi.sort
+    </select>
+</mapper>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jiayuan.modules.template.dao.TableDao">
+
+    <resultMap type="com.jiayuan.modules.template.entity.TableEntity" id="tableMap">
+        <result property="id" column="id"/>
+        <result property="tableName" column="table_name"/>
+        <result property="tableCode" column="table_code"/>
+        <result property="sort" column="sort"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="creator" column="creator"/>
+        <result property="createDate" column="create_date"/>
+        <result property="updater" column="updater"/>
+        <result property="updateDate" column="update_date"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.jiayuan.modules.template.dto.TableDTO" id="tableInfoMap">
+        <result property="id" column="id"/>
+        <result property="tableName" column="table_name"/>
+        <result property="tableCode" column="table_code"/>
+        <result property="sort" column="sort"/>
+        <result property="isLoop" column="is_loop"/>
+        <result property="primaryCode" column="primary_code"/>
+        <result property="slaveType" column="slave_type"/>
+        <result property="mainTableCode" column="main_table_code"/>
+        <result property="isShow" column="is_show"/>
+        <collection property="fieldList" ofType="com.jiayuan.modules.template.entity.TableFieldEntity">
+            <id property="id" column="fieldId"/>
+            <result property="fieldName" column="field_name"/>
+            <result property="fieldCode" column="field_code"/>
+            <result property="sort" column="sortField"/>
+            <result property="dataType" column="data_type"/>
+            <result property="fieldType" column="field_type"/>
+            <result property="isShow" column="fShow"/>
+            <result property="remark" column="fRemark"/>
+        </collection>
+    </resultMap>
+
+    <!--删除-->
+    <delete id="deleteAll">
+        delete
+        from cbdses_table
+        where table_code != #{cbdsesVisitRecord}
+    </delete>
+
+
+    <!--表备份-->
+    <select id="metaDataBackupOfTable">
+        CREATE TABLE cbdses_table${timestamp}
+        SELECT *
+        FROM cbdses_table
+
+    </select>
+
+    <!--字段备份-->
+    <select id="metaDataBackupOfField">
+        CREATE TABLE cbdses_table_field${timestamp}
+        SELECT *
+        FROM cbdses_table_field
+    </select>
+
+
+    <!--查询表信息-->
+    <select id="findTableInfo" resultMap="tableInfoMap">
+        select mt.id,
+        mt.table_name,
+        mt.table_code,
+        mt.is_loop,
+        mt.primary_code,
+        mt.slave_type,
+        mt.related_field,
+        mt.main_table_code,
+        mt.is_show,
+        0 as sort,
+        mtf.id fieldId,
+        mtf.field_name,
+        mtf.field_code,
+        mtf.sort sortField,
+        mtf.data_type,
+        mtf.field_type,
+        mtf.is_show fShow,
+        mtf.remark fRemark
+        from cbdses_table_field mtf
+        inner join cbdses_table mt on mt.id = mtf.table_id
+        where mt.is_deleted = 0
+        and mt.is_effective = 1
+        and mtf.is_deleted = 0
+        and mtf.is_effective = 1
+        and mtf.is_show = 1
+        and mt.is_show = 1
+        <if test="keyword != null and keyword != ''">
+            <if test="type == 1">
+                and mt.table_name like '%' || #{keyword} || '%'
+            </if>
+            <if test="type == 2">
+                and mtf.field_name like '%' || #{keyword} || '%'
+            </if>
+        </if>
+        <if test="classifyId != null">
+            and mt.classify_id = #{classifyId}
+        </if>
+        order by mt.table_name, mtf.field_name
+    </select>
+
+    <!--查询表信息-->
+    <select id="findTableMeta" resultType="com.jiayuan.modules.searchv2.component.TableFieldInfo">
+        SELECT
+            a.table_name as tableName,
+            a.table_code as tableCode,
+            b.field_name as fieldName,
+            b.field_code as fieldCode
+        FROM
+            cbdses_table a
+                INNER JOIN cbdses_table_field b ON a.id = b.table_id
+    </select>
+
+
+</mapper>

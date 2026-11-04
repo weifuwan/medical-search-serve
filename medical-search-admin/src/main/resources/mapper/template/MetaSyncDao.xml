@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.jiayuan.modules.template.dao.MetaSyncDao">
+
+    <!--查询表列表-->
+    <select id="selectTableList" resultType="com.jiayuan.modules.template.entity.TableEntity">
+        <choose>
+            <when test="dbType == 'mysql'">
+                select table_name tableCode,
+                table_comment tableName
+                from
+                information_schema.tables
+                where table_schema = (select database())
+                <if test="regex != null and regex != ''">
+                    and table_name
+                    <if test="negation != null and negation == true">
+                        NOT
+                    </if>
+                    REGEXP
+                    #{regex}
+                </if>
+                order by create_time desc
+            </when>
+            <otherwise>
+                SELECT
+                t.table_name AS tableCode,
+                tc.comments AS tableName
+                FROM
+                all_tables t
+                JOIN
+                all_tab_comments tc
+                ON
+                t.table_name = tc.table_name
+                AND t.owner = tc.owner
+                WHERE
+                t.owner = 'MIP'
+                <if test="regex != null and regex != ''">
+                    and t.table_name = #{regex}
+                </if>
+            </otherwise>
+        </choose>
+
+    </select>
+
+
+    <!-- 查询字段列表 -->
+    <select id="selectColumnList" resultType="com.jiayuan.modules.template.entity.TableFieldEntity">
+        <choose>
+            <when test="dbType == 'mysql'">
+                select column_name fieldCode,
+                data_type dataType,
+                column_comment fieldName
+                from information_schema.columns
+                where table_name = #{tableCode}
+                and table_schema = (select database())
+                order by ordinal_position
+            </when>
+            <otherwise>
+                SELECT
+                c.column_name AS fieldCode,
+                c.data_type AS dataType,
+                cc.comments AS fieldName
+                FROM
+                all_tab_columns c
+                LEFT JOIN
+                all_col_comments cc
+                ON
+                c.table_name = cc.table_name
+                AND c.column_name = cc.column_name
+                AND c.owner = cc.owner
+                WHERE
+                c.table_name = #{tableCode}
+                AND c.owner = 'MIP'
+                ORDER BY
+                c.column_name
+            </otherwise>
+        </choose>
+    </select>
+    <select id="queryMetaOrder" resultType="com.jiayuan.modules.template.entity.TableFieldEntity"
+            parameterType="java.lang.String">
+        SELECT
+            table_name as tableCode,
+            column_name as fieldCode,
+            data_type as dataType,
+            column_id as sort
+        FROM all_tab_columns
+        WHERE table_name = #{tableName}
+        ORDER BY column_id
+    </select>
+</mapper>
