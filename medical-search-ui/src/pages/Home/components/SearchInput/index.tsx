@@ -6,6 +6,12 @@ import { useEffect, useState } from 'react';
 import { IndexModelState } from '@/models/searchModel';
 import { getSearchSymbolList, getTemplateList } from '@/services/home/api';
 import { getSessionVal, setSessionVal } from '@/utils';
+import {
+  clearActiveSearchTemplate,
+  readSearchConfig,
+  saveActiveSearchTemplate,
+} from '@/services/searchTemplate/searchConfig';
+import type { ActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 
 import JYModal from '@/components/JYModal';
 import SearchAdvanced from '../SearchAdvanced';
@@ -15,6 +21,7 @@ interface SearchInputProps {
   size?: string;
   defaultSearchVal?: string;
   handleSearchVal: (val: string, dimension: number) => void;
+  onTemplateSelect?: (template: ActiveSearchTemplate | null) => void;
 }
 
 // 检索输入组件
@@ -25,6 +32,7 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
     isShowUpdateBtn = false,
     defaultSearchVal = getSessionVal('searchVal'),
     handleSearchVal,
+    onTemplateSelect,
   } = props;
   const defaultDimension = useSelector(
     (state: { searchModel: IndexModelState }) => state.searchModel.dimension,
@@ -201,11 +209,13 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
             return;
         }
 
+        clearActiveSearchTemplate();
+        onTemplateSelect?.(null);
         const searchValsymVal = `${searchVal || ''}${symbol.label}`;
         setSessionVal('searchVal', searchValsymVal);
         setSearchVal(searchValsymVal);
     } else {
-        const template = templateList.find(item => item.id === val);
+        const template = templateList.find(item => String(item.id) === String(val));
 
         if (!template) {
             message.error('未找到对应模版');
@@ -213,13 +223,25 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
         }
 
         const temVal = template.expression;
+        const config = readSearchConfig(template.searchConfig);
+        const activeTemplate: ActiveSearchTemplate = {
+          id: template.id!,
+          expression: temVal,
+          config,
+        };
+        saveActiveSearchTemplate(activeTemplate);
         setSessionVal('searchVal', temVal);
+        setSessionVal('dimensionVal', config.dimension);
+        setDimension(config.dimension);
         setSearchVal(temVal);
+        onTemplateSelect?.(activeTemplate);
     }
 };
 
   // 高级检索回调
   const handleFinish = (val: string) => {
+    clearActiveSearchTemplate();
+    onTemplateSelect?.(null);
     setSessionVal('searchVal', val);
     setSearchVal(val);
     setIsModalOpen(false);
@@ -228,6 +250,8 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
 
   // 搜索词输入回调
   const handleChange = (val: string) => {
+    clearActiveSearchTemplate();
+    onTemplateSelect?.(null);
     isOpenSearchSelect ? setIsOpenSearchSelect(false) : null; // 关闭下拉框
     setSessionVal('searchVal', val);
     setSearchVal(val);

@@ -7,6 +7,8 @@ import {
 } from '@ant-design/pro-components'
 import { Form, message } from 'antd'
 import { iuTemplate } from '@/services/searchTemplate/api'
+import { defaultSearchConfig } from '@/services/searchTemplate/searchConfig'
+import { getSessionVal } from '@/utils'
 
 interface SaveTemplateProps {
     showModalForm: boolean;
@@ -28,6 +30,10 @@ const SaveTemplate: React.FC<SaveTemplateProps> = (props) => {
             useScope: formValues.useScope,
             templateName: formValues.templateName,
             expression: expression,
+            searchConfig: JSON.stringify({
+                ...defaultSearchConfig,
+                dimension: getSessionVal('dimensionVal') === 1 ? 1 : 0,
+            }),
             templateFieldDTOList: list.map((item: STEMPLATEAPI.TemplateField, index: number) => ({
                 fieldId: item.fieldId,
                 fieldName: item.title,

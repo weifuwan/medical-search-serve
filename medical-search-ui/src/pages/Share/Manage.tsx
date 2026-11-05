@@ -15,6 +15,7 @@ import {
 } from 'antd';
 import { ShareAltOutlined } from '@ant-design/icons';
 import { setSessionVal } from '@/utils';
+import { clearActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
 import {
   deleteFavorite,
@@ -70,6 +71,7 @@ const ShareManage: React.FC = () => {
 
   const search = (expression: string) => {
     dispatch({ type: 'searchModel/reset' });
+    clearActiveSearchTemplate();
     setSessionVal('searchVal', expression);
     setSessionVal('dimensionVal', 0);
     history.push('/home/searchList');

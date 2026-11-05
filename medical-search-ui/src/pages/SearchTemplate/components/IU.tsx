@@ -16,6 +16,11 @@ import type { TransferItem } from 'antd/es/transfer';
 import type { DataNode } from 'antd/es/tree';
 
 import TemplateETable, { DataSourceType } from '../../Home/components/SearchAdvanced/TemplateETable'
+import SearchConfigEditor from './SearchConfigEditor'
+import {
+    defaultSearchConfig, readSearchConfig,
+} from '@/services/searchTemplate/searchConfig'
+import type { TemplateSearchConfig } from '@/services/searchTemplate/searchConfig'
 import './IU.less'
 
 const { Search } = Input
@@ -53,6 +58,10 @@ const IU: React.FC<IUProps> = (props) => {
     const [editableRowKeys, setEditableRowKeys] = useState<React.Key[]>([])// 表格编辑状态的 key
     const [alreadyTableData, setAlreadyTableData] = useState<DataSourceType[]>([])// 已经选择的数据
     const [previewData, setPreviewData] = useState('')
+    const [searchConfig, setSearchConfig] = useState<TemplateSearchConfig>({
+        ...defaultSearchConfig,
+        columns: [],
+    })
     const [pageLoading, setPageLoading] = useState(false)
     // const [isShowPreview, setIsShowPreview] = useState(false)
     // const [previewLoading, setPreviewLoading] = useState(false)
@@ -204,6 +213,7 @@ const IU: React.FC<IUProps> = (props) => {
                 templateName: data.templateName,
                 useScope: data.useScope,
             })
+            setSearchConfig(readSearchConfig(data.searchConfig))
             setAlreadyTableData(data?.templateFieldDTOList.map((item: STEMPLATEAPI.TemplateField) => ({
                 ...item,
                 fieldId: item.fieldId,
@@ -228,6 +238,7 @@ const IU: React.FC<IUProps> = (props) => {
             id: isUpdate ? templateId : '',
             useScope: formValues.useScope,
             expression: previewData,
+            searchConfig: JSON.stringify(searchConfig),
             templateName: formValues.templateName,
             templateFieldDTOList: tableValues.map((item: STEMPLATEAPI.TemplateField, index: number) => ({
                 ...item,
@@ -391,6 +402,16 @@ const IU: React.FC<IUProps> = (props) => {
                     />
                 </ProForm.Group>
             </ProForm>
+            <SearchConfigEditor
+                value={searchConfig}
+                onChange={setSearchConfig}
+                fields={saveTransferData
+                    .filter((item: any) => item.tableCode === 'ms_visit_record' && item.fieldCode)
+                    .map((item: any) => ({
+                        fieldCode: item.fieldCode,
+                        fieldName: item.fieldName,
+                    }))}
+            />
             <Transfer
                 className="search-template-transfer"
                 dataSource={transferData}

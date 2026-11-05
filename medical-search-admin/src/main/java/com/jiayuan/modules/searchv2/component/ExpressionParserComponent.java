@@ -22,6 +22,7 @@ import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -86,6 +87,7 @@ public class ExpressionParserComponent {
 
     private static final int CACHE_SIZE = 100;
     private Cache<String, NodeQueryVo> cache;
+    private Cache<String, List<String>> orderCache;
 
     /**
      * Initializes and configures the Guava cache instance with optimal settings.
@@ -101,6 +103,10 @@ public class ExpressionParserComponent {
                         log.debug("Cache entry removed. Key: {}, Cause: {}",
                                 notification.getKey(),
                                 notification.getCause()))
+                .build();
+        this.orderCache = CacheBuilder.newBuilder()
+                .maximumSize(CACHE_SIZE)
+                .expireAfterAccess(10, TimeUnit.MINUTES)
                 .build();
     }
 
@@ -195,7 +201,9 @@ public class ExpressionParserComponent {
                     request.getSize(),
                     request.getColumnList(),
                     request.getEsBatchSize(),
-                    request.isExport()
+                    request.isExport(),
+                    request.getOrderFieldCode(),
+                    request.getOrderMode()
             );
 
             log.info("Search completed successfully in {} ms. Results: {}",
@@ -230,6 +238,18 @@ public class ExpressionParserComponent {
                                                     List<FieldDTO> selectColumns,
                                                     int esBatchSize,
                                                     boolean isExport) throws Exception {
+        return getOptimizedJoinedResultsCustom(condition, pageNum, pageSize,
+                selectColumns, esBatchSize, isExport, null, null);
+    }
+
+    public SearchVo getOptimizedJoinedResultsCustom(String condition,
+                                                    int pageNum,
+                                                    int pageSize,
+                                                    List<FieldDTO> selectColumns,
+                                                    int esBatchSize,
+                                                    boolean isExport,
+                                                    String orderFieldCode,
+                                                    String orderMode) throws Exception {
         if (StringUtils.isBlank(condition)) {
             throw new IllegalArgumentException("Search condition cannot be null or empty");
         }
@@ -253,7 +273,7 @@ public class ExpressionParserComponent {
             logCacheStatistics();
 
             return getOptimizedJoinedResults(
-                    cachedResults,
+                    applyOrder(cachedResults, conditionHash, orderFieldCode, orderMode),
                     pageNum,
                     pageSize,
                     selectColumns,
@@ -269,12 +289,83 @@ public class ExpressionParserComponent {
         log.info("Cached new results for condition hash: {}", conditionHash);
 
         return getOptimizedJoinedResults(
-                joinedResults,
+                applyOrder(joinedResults, conditionHash, orderFieldCode, orderMode),
                 pageNum,
                 pageSize,
                 selectColumns,
                 esBatchSize
         );
+    }
+
+    private NodeQueryVo applyOrder(NodeQueryVo results, String conditionHash,
+                                   String fieldCode, String mode) throws IOException {
+        if (StringUtils.isBlank(fieldCode) || results.getResult().isEmpty()) {
+            return results;
+        }
+
+        String sortMode = "desc".equalsIgnoreCase(mode) ? "desc" : "asc";
+        String cacheKey = conditionHash + ":" + fieldCode + ":" + sortMode;
+        List<String> ordered = orderCache.getIfPresent(cacheKey);
+        if (ordered == null) {
+            ordered = sortVisitNumbers(results.getResult(), fieldCode, sortMode);
+            orderCache.put(cacheKey, ordered);
+        }
+
+        NodeQueryVo sorted = new NodeQueryVo();
+        sorted.setQueries(results.getQueries());
+        sorted.setResult(ordered);
+        return sorted;
+    }
+
+    private List<String> sortVisitNumbers(List<String> visitNumbers,
+                                          String fieldCode, String mode) throws IOException {
+        Map<String, String> fieldTypes = indexStructureCache.getFieldTypes(VISIT_RECORD_INDEX);
+        if (!fieldTypes.containsKey(fieldCode)) {
+            throw new BizException("排序字段不存在: " + fieldCode);
+        }
+
+        String sortField = AGE_FIELD.equals(fieldCode) ? AGE_SECONDS_FIELD
+                : "text".equals(fieldTypes.get(fieldCode)) ? fieldCode + ".keyword" : fieldCode;
+
+        SearchSourceBuilder source = new SearchSourceBuilder()
+                .query(QueryBuilders.termsQuery("visit_no.keyword", visitNumbers))
+                .fetchSource(false)
+                .docValueField("visit_no.keyword")
+                .sort(sortField, "desc".equals(mode) ? SortOrder.DESC : SortOrder.ASC)
+                .sort("visit_no.keyword", SortOrder.ASC)
+                .size(1000);
+
+        Set<String> orderedSet = new LinkedHashSet<>();
+        while (true) {
+            org.elasticsearch.action.search.SearchRequest request =
+                    new org.elasticsearch.action.search.SearchRequest(VISIT_RECORD_INDEX).source(source);
+            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+            SearchHit[] hits = response.getHits().getHits();
+            if (hits.length == 0) {
+                break;
+            }
+
+            for (SearchHit hit : hits) {
+                if (hit.getFields().containsKey("visit_no.keyword")) {
+                    Object visitNo = hit.getFields().get("visit_no.keyword").getValue();
+                    if (visitNo != null) {
+                        orderedSet.add(visitNo.toString());
+                    }
+                }
+            }
+            if (hits.length < 1000) {
+                break;
+            }
+            source.searchAfter(hits[hits.length - 1].getSortValues());
+        }
+
+        List<String> ordered = new ArrayList<>(orderedSet);
+        for (String visitNo : visitNumbers) {
+            if (!orderedSet.contains(visitNo)) {
+                ordered.add(visitNo);
+            }
+        }
+        return ordered;
     }
 
     /**

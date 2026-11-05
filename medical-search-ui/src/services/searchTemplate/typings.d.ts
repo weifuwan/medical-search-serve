@@ -7,6 +7,7 @@ declare namespace STEMPLATEAPI {
         templateName: string;
         useScope: string;
         expression: string;
+        searchConfig?: string;
         createDate: string;
         creatorName: string;
         updateDate: string;
@@ -33,6 +34,7 @@ declare namespace STEMPLATEAPI {
         templateName: string;
         useScope: string;
         expression: string;
+        searchConfig?: string;
         templateFieldDTOList: TemplateField[];
     }
 

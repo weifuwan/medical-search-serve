@@ -84,6 +84,7 @@ public class TemplateServiceImpl extends CrudServiceImpl<TemplateDao, TemplateEn
         UserDetail loginUser = SecurityUser.getUser();
         Long templateId = dto.getId();
         final List<TemplateFieldDTO> fieldDTOList = dto.getTemplateFieldDTOList();
+        TemplateSearchConfig.parse(dto.getSearchConfig());
         if (Objects.nonNull(templateId)) {
             // 更新
             ValidatorUtils.validateEntity(dto, UpdateGroup.class, DefaultGroup.class);

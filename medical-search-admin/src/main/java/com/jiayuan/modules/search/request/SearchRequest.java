@@ -35,6 +35,9 @@ public class SearchRequest implements Serializable, Cloneable {
     @ApiModelProperty(value = "检索表达式")
     private String expression;
 
+    @ApiModelProperty(value = "应用的检索模板ID")
+    private Long templateId;
+
     @EnumList(value = BizConstant.Dimension.class, message = "检索维度不合法")
     @ApiModelProperty(value = "检索维度")
     private Integer dimension;
