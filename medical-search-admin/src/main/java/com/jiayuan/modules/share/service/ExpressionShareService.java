@@ -37,7 +37,8 @@ public class ExpressionShareService {
         if (user.getUserId() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
         }
-        if (user.getGroupCode() == null || user.getOrganizationCode() == null) {
+        if (user.getGroupCode() == null || user.getGroupCode().trim().isEmpty() ||
+                user.getOrganizationCode() == null || user.getOrganizationCode().trim().isEmpty()) {
             throw new BizException("当前账号缺少集团或组织信息，无法使用分享功能");
         }
         return user;
@@ -94,6 +95,9 @@ public class ExpressionShareService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> create(ExpressionShareRequest input) {
+        if (input == null) {
+            throw new BizException("分享内容不能为空");
+        }
         UserDetail user = actor();
         validateContent(input.getTitle(), input.getExpression());
         String shareScope = scope(input.getScope());
@@ -182,6 +186,7 @@ public class ExpressionShareService {
                 (isOwner || "EDIT".equals(granted)));
         if (isOwner) {
             m.put("userIds", repository.members(record.getId()));
+            m.put("users", repository.memberUsers(record.getId()));
         }
         return m;
     }
@@ -198,6 +203,9 @@ public class ExpressionShareService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> update(String code, ExpressionShareRequest input) {
+        if (input == null) {
+            throw new BizException("分享内容不能为空");
+        }
         UserDetail user = actor();
         ExpressionShareRecord record = get(code);
         authorize(record, user, true);
@@ -288,6 +296,9 @@ public class ExpressionShareService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> addFavorite(ExpressionShareRequest input, String originCode) {
+        if (input == null) {
+            throw new BizException("收藏内容不能为空");
+        }
         UserDetail user = actor();
         String originId = null;
         if (originCode != null && !originCode.isEmpty()) {
