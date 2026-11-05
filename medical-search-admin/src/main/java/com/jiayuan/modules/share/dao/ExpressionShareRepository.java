@@ -111,8 +111,9 @@ public class ExpressionShareRepository {
         return jdbc.query("SELECT * FROM (SELECT s.* FROM cbdses_expression_share s " +
                         "WHERE s.owner_id <> ? AND s.status = 'ACTIVE' " +
                         "AND s.expires_at > CURRENT_TIMESTAMP " +
-                        "AND ((s.scope = 'HOSPITAL' AND s.group_code = ? AND s.organization_code = ?) " +
-                        "OR (s.scope = 'USERS' AND EXISTS (SELECT 1 FROM cbdses_expression_share_member m " +
+                        "AND s.group_code = ? AND s.organization_code = ? " +
+                        "AND (s.scope = 'HOSPITAL' OR (s.scope = 'USERS' AND EXISTS " +
+                        "(SELECT 1 FROM cbdses_expression_share_member m " +
                         "WHERE m.share_id = s.id AND m.user_id = ?))) ORDER BY s.updated_at DESC) " +
                         "WHERE ROWNUM <= 100",
                 mapper, userId, groupCode, organizationCode, userId);

@@ -165,9 +165,9 @@ public class ExpressionShareService {
         }
     }
 
-    private Map<String, Object> view(ExpressionShareRecord record, UserDetail user) {
+    private Map<String, Object> view(ExpressionShareRecord record, UserDetail user, boolean includeMembers) {
         boolean isOwner = owner(record, user);
-        String granted = isOwner ? "EDIT" : memberPermission(record, user);
+        String granted = isOwner ? "EDIT" : record.getPermission();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", record.getId());
         m.put("code", record.getCode());
@@ -184,7 +184,7 @@ public class ExpressionShareService {
         m.put("canManage", isOwner);
         m.put("canEdit", "ACTIVE".equals(record.getStatus()) &&
                 (isOwner || "EDIT".equals(granted)));
-        if (isOwner) {
+        if (isOwner && includeMembers) {
             m.put("userIds", repository.members(record.getId()));
             m.put("users", repository.memberUsers(record.getId()));
         }
@@ -198,7 +198,7 @@ public class ExpressionShareService {
         if (logAccess) {
             repository.audit(record.getId(), user.getUserId(), "VIEW");
         }
-        return view(record, user);
+        return view(record, user, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -261,7 +261,7 @@ public class ExpressionShareService {
         UserDetail user = actor();
         List<Map<String, Object>> result = new ArrayList<>();
         for (ExpressionShareRecord record : repository.mine(user.getUserId())) {
-            result.add(view(record, user));
+            result.add(view(record, user, false));
         }
         return result;
     }
