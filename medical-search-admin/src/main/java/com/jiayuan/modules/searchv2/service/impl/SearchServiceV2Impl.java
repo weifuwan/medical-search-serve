@@ -54,14 +54,15 @@ public class SearchServiceV2Impl implements SearchServiceV2 {
         List<FieldDTO> columns = resultFieldService.getUserShowFieldList();
         if (request.getTemplateId() != null) {
             TemplateDTO template = templateService.get(request.getTemplateId());
-            if (template == null || (!Objects.equals(template.getUseScope(), 0)
+            if (template == null || Objects.equals(template.getIsDeleted(), 1)
+                    || (!Objects.equals(template.getUseScope(), 0)
                     && !Objects.equals(template.getCreator(), SecurityUser.getUserId()))) {
                 throw new BizException("无权使用该检索模板");
             }
             TemplateSearchConfig config = TemplateSearchConfig.parse(template.getSearchConfig());
             if (config != null) {
                 request.setScopeExpression(config.getScopeExpression());
-                if (config.getDimension() != null) {
+                if (config.getDimension() != null && request.getDimension() == null) {
                     request.setDimension(config.getDimension());
                 }
                 if (config.getSort() != null ||
