@@ -271,7 +271,7 @@ public class ExpressionShareService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (ExpressionShareRecord record : repository.received(user.getUserId(),
                 user.getGroupCode(), user.getOrganizationCode())) {
-            result.add(view(record, user));
+            result.add(view(record, user, false));
         }
         return result;
     }
