@@ -523,6 +523,9 @@ public class ExpressionParserComponent {
                     }
 
                     mergedResults.add(orderedMap);
+                    if (VISIT_RECORD_INDEX.equals(hit.getIndex())) {
+                        orderedMap.remove(AGE_SECONDS_FIELD);
+                    }
                 } else {
                     log.warn("Null source map encountered for document ID: {}", hit.getId());
                 }
@@ -611,6 +614,7 @@ public class ExpressionParserComponent {
             Map<String, Object> sourceMap = hit.getSourceAsMap();
             if (sourceMap != null) {
                 visitInfo.putAll(sourceMap);
+                visitInfo.remove(AGE_SECONDS_FIELD);
                 log.debug("Extracted {} fields from visit record", sourceMap.size());
             } else {
                 log.warn("Visit record source map is null");
@@ -950,7 +954,7 @@ public class ExpressionParserComponent {
                             new TermsValuesSourceBuilder("visit_no")
                                     .field("visit_no.keyword")
                     )
-            ).size(300000);
+            ).size(65535);
 
             searchSourceBuilder.aggregation(compositeAgg);
             searchSourceBuilder.size(0);
@@ -971,8 +975,10 @@ public class ExpressionParserComponent {
         for (MultiSearchResponse.Item item : multiSearchResponse.getResponses()) {
             if (item.getFailure() != null) {
                 log.error("Error with query: " + item.getFailure().getMessage());
-                queryIndex++;
-                continue;
+                throw new IOException(
+                        "Elasticsearch query failed",
+                        item.getFailure()
+                );
             }
 
             SearchResponse response = item.getResponse();

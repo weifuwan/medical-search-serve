@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useState } from "react"
 import { Row, Col, Divider } from "antd"
 import { PageLoading } from "@ant-design/pro-components"
-import { getHistoryList, getUserHotList } from '@/services/home/api'
+import { getHistoryList, getHotList } from '@/services/home/api'
 import SearchInput from './components/SearchInput'
 import HomeList from './components/HomeList'
 import styles from './index.less'
@@ -25,7 +25,7 @@ const Home: React.FC = () => {
     // 获取热门检索数据
     const handleHotList = async (top: number) => {
         hotLoading = true
-        const { code, data } = await getUserHotList({ top })
+        const { code, data } = await getHotList({ top })
         if (code === 0) {
             setHotList(data)
             hotLoading = false
