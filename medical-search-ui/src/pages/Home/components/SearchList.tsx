@@ -1,5 +1,5 @@
 import { useLocation, useModel, useSelector } from '@umijs/max';
-import { Button, Card, Col, message, Pagination, Radio, Row, Table, Tooltip, Typography } from 'antd';
+import { Button, Card, Col, message, Pagination, Radio, Row, Table, Tag, Tooltip, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import type { IndexModelState } from '@/models/searchModel';
@@ -13,7 +13,7 @@ import { CloseOutlined, ShareAltOutlined } from '@ant-design/icons';
 import SaveData from './SaveData';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
 import { getSessionVal } from '@/utils';
-import { getActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
+import { clearActiveSearchTemplate, getActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 import type { ActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 
 interface DataType {
@@ -434,6 +434,21 @@ const SearchList: React.FC = () => {
       />
 
       <div className="flx-justify-end" style={{ marginBottom: 12 }}>
+        {activeTemplate && (
+          <>
+            <Tag color="blue">已应用模板参数</Tag>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                clearActiveSearchTemplate();
+                handleTemplateSelect(null);
+              }}
+            >
+              重置模板参数
+            </Button>
+          </>
+        )}
         <Radio.Group
           style={{ marginRight: 12 }}
           size="small"

@@ -8,6 +8,7 @@ import { getSearchSymbolList, getTemplateList } from '@/services/home/api';
 import { getSessionVal, setSessionVal } from '@/utils';
 import {
   clearActiveSearchTemplate,
+  getActiveSearchTemplate,
   readSearchConfig,
   saveActiveSearchTemplate,
 } from '@/services/searchTemplate/searchConfig';
@@ -209,9 +210,13 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
             return;
         }
 
-        clearActiveSearchTemplate();
-        onTemplateSelect?.(null);
         const searchValsymVal = `${searchVal || ''}${symbol.label}`;
+        const active = getActiveSearchTemplate(searchVal);
+        if (active) {
+          saveActiveSearchTemplate({ ...active, expression: searchValsymVal });
+        } else {
+          clearActiveSearchTemplate();
+        }
         setSessionVal('searchVal', searchValsymVal);
         setSearchVal(searchValsymVal);
     } else {
@@ -240,8 +245,12 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
 
   // 高级检索回调
   const handleFinish = (val: string) => {
-    clearActiveSearchTemplate();
-    onTemplateSelect?.(null);
+    const active = getActiveSearchTemplate(searchVal);
+    if (active) {
+      saveActiveSearchTemplate({ ...active, expression: val });
+    } else {
+      clearActiveSearchTemplate();
+    }
     setSessionVal('searchVal', val);
     setSearchVal(val);
     setIsModalOpen(false);
@@ -250,8 +259,13 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
 
   // 搜索词输入回调
   const handleChange = (val: string) => {
-    clearActiveSearchTemplate();
-    onTemplateSelect?.(null);
+    const active = getActiveSearchTemplate(searchVal);
+    if (active && val) {
+      saveActiveSearchTemplate({ ...active, expression: val });
+    } else {
+      clearActiveSearchTemplate();
+      onTemplateSelect?.(null);
+    }
     isOpenSearchSelect ? setIsOpenSearchSelect(false) : null; // 关闭下拉框
     setSessionVal('searchVal', val);
     setSearchVal(val);
