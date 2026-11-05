@@ -237,7 +237,7 @@ const ExpressionShareModal: React.FC<Props> = ({
           label="检索表达式"
           rules={[{ required: true, message: '检索表达式不能为空' }]}
         >
-          <Input.TextArea rows={3} maxLength={1200} disabled />
+          <Input.TextArea rows={3} maxLength={1200} disabled={!!record && !canManage} />
         </Form.Item>
         {(!record || canManage) && (
           <>
