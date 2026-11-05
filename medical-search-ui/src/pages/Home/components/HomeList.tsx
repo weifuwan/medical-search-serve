@@ -6,6 +6,7 @@ import NoData from '@/components/JYNoData';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
 import defaultSettings from '../../../../config/defaultSettings';
 import { setSessionVal } from '@/utils';
+import { clearActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 import styles from '../index.less';
 
 const HomeList: React.FC<HOME.ListProps> = (props) => {
@@ -20,6 +21,7 @@ const HomeList: React.FC<HOME.ListProps> = (props) => {
   const actionClick = (num: number, expression: string) => {
     if (num === 1) {
       dispatch({ type: 'searchModel/reset' });
+      clearActiveSearchTemplate();
       setSessionVal('searchVal', expression);
       history.push({
         pathname: '/home/searchList',

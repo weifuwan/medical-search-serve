@@ -1,5 +1,5 @@
 import { useLocation, useModel, useSelector } from '@umijs/max';
-import { Button, message, Table, Tooltip } from 'antd';
+import { Button, Card, Col, message, Pagination, Radio, Row, Table, Tag, Tooltip, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import type { IndexModelState } from '@/models/searchModel';
@@ -13,6 +13,8 @@ import { CloseOutlined, ShareAltOutlined } from '@ant-design/icons';
 import SaveData from './SaveData';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
 import { getSessionVal } from '@/utils';
+import { clearActiveSearchTemplate, getActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
+import type { ActiveSearchTemplate } from '@/services/searchTemplate/searchConfig';
 
 interface DataType {
   empiID: string;
@@ -45,13 +47,18 @@ const SearchList: React.FC = () => {
     new URLSearchParams(location.search).get('searchParams') || getSessionVal('searchVal') || '',
   );
   const [shareOpen, setShareOpen] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<ActiveSearchTemplate | null>(
+    () => getActiveSearchTemplate(
+      new URLSearchParams(location.search).get('searchParams') || getSessionVal('searchVal') || '',
+    ),
+  );
   const showUpdate = useSelector(
     (state: { searchModel: IndexModelState }) => state.searchModel.showUpdate,
   );
   const defaultDimension = useSelector(
     (state: { searchModel: IndexModelState }) => state.searchModel.dimension,
   );
-  const [dimension, setDimension] = useState(defaultDimension); // 维度 0：人次  1： 人
+  const [dimension, setDimension] = useState(activeTemplate?.config.dimension ?? defaultDimension); // 维度 0：人次  1： 人
   const [loading, setLoading] = useState(false); // 表格加载状态
   const [isShow360View, setIsShow360View] = useState(false);
   const [patientId, setPatientId] = useState('');
@@ -63,14 +70,17 @@ const SearchList: React.FC = () => {
   const [saveDataList, setSaveDataList] = useState<any>(); // 保存原始获取到的数据
   //   const [page, setPage] = useState(1);
   //   const [size, setSize] = useState(10);
-  const [orderTableCode, setOrderTableCode] = useState('');
-  const [orderFieldCode, setOrderFieldCode] = useState('');
-  const [orderMode, setOrderMode] = useState('asc'); // 排序方式
+  const [orderTableCode, setOrderTableCode] = useState(activeTemplate?.config.sort?.tableCode || '');
+  const [orderFieldCode, setOrderFieldCode] = useState(activeTemplate?.config.sort?.fieldCode || '');
+  const [orderMode, setOrderMode] = useState(activeTemplate?.config.sort?.mode || 'asc'); // 排序方式
   const [pagination, setPagination] = useState({
-    current: 1, // 当前页码
-    pageSize: 10, // 每页条数
-    total: 0, // 总数据条数
+    current: 1,
+    pageSize: activeTemplate?.config.pageSize || 10,
+    total: 0,
   });
+  const [viewMode, setViewMode] = useState<'TABLE' | 'CARD'>(
+    activeTemplate?.config.viewMode || 'TABLE',
+  );
 
   const [searchResults, setSearchResults] = useState([]);
   const [baseColumn, setBaseColunmns] = useState([]);
@@ -129,6 +139,7 @@ const SearchList: React.FC = () => {
     const paramsData = {
       dimension: dimension, // 人次：0  人：1
       expression: expression,
+      templateId: activeTemplate?.id,
       page: current,
       size: pageSize,
       orderTableCode,
@@ -203,7 +214,7 @@ const SearchList: React.FC = () => {
         setSearchResults([]);
         setPagination({
           current: 0,
-          pageSize: 10,
+          pageSize,
           total: 0,
         });
         message.warn('没有查询到数据！');
@@ -348,6 +359,20 @@ const SearchList: React.FC = () => {
     return <div>{renderDynamicTables(record?.jykj_subTables)}</div>;
   };
 
+  const handleTemplateSelect = (template: ActiveSearchTemplate | null) => {
+    setActiveTemplate(template);
+    setViewMode(template?.config.viewMode || 'TABLE');
+    setDimension(template?.config.dimension ?? 0);
+    setOrderTableCode(template?.config.sort?.tableCode || '');
+    setOrderFieldCode(template?.config.sort?.fieldCode || '');
+    setOrderMode(template?.config.sort?.mode || 'asc');
+    setPagination((current) => ({
+      ...current,
+      current: 1,
+      pageSize: template?.config.pageSize || 10,
+    }));
+  };
+
   // 搜索词改变回调
   const handleSearchVal = (val: string, dimension: number) => {
     const params = {
@@ -359,7 +384,7 @@ const SearchList: React.FC = () => {
     setSearchParams(val);
     setDimension(dimension);
     setSaveParams(params);
-    getSearchData(val, dimension, 1, 10);
+    getSearchData(val, dimension, 1, pagination.pageSize);
   };
 
   const handleSearch = ({ pageNum = 1, pageSize = 10 }) => {
@@ -405,9 +430,36 @@ const SearchList: React.FC = () => {
         isShowUpdateBtn={showUpdate}
         defaultSearchVal={searchParams}
         handleSearchVal={handleSearchVal}
+        onTemplateSelect={handleTemplateSelect}
       />
 
       <div className="flx-justify-end" style={{ marginBottom: 12 }}>
+        {activeTemplate && (
+          <>
+            <Tag color="blue">已应用模板参数</Tag>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                clearActiveSearchTemplate();
+                handleTemplateSelect(null);
+              }}
+            >
+              重置模板参数
+            </Button>
+          </>
+        )}
+        <Radio.Group
+          style={{ marginRight: 12 }}
+          size="small"
+          optionType="button"
+          buttonStyle="solid"
+          value={viewMode}
+          onChange={(event) => setViewMode(event.target.value)}
+        >
+          <Radio.Button value="TABLE">表格</Radio.Button>
+          <Radio.Button value="CARD">卡片</Radio.Button>
+        </Radio.Group>
         <Button
           style={{ marginRight: 12 }}
           icon={<ShareAltOutlined />}
@@ -416,11 +468,52 @@ const SearchList: React.FC = () => {
         >
           分享检索
         </Button>
-        <SaveData saveParams={saveParams} disabled={loading} />
+        <Tooltip title={activeTemplate?.config.scopeExpression
+          ? '附加范围条件的检索暂不支持直接导出' : ''}>
+          <span>
+            <SaveData
+              saveParams={saveParams}
+              disabled={loading || !!activeTemplate?.config.scopeExpression}
+            />
+          </span>
+        </Tooltip>
       </div>
 
       <div>
-        <Table
+        {viewMode === 'CARD' ? (
+          <>
+            <Row gutter={[16, 16]}>
+              {(searchResults as any[]).map((row, index) => (
+                <Col key={row.key ?? index} xs={24} md={12} lg={8}>
+                  <Card
+                    size="small"
+                    title={row.patient_name || row.visit_no || '就诊记录'}
+                    extra={<a onClick={() => actionClick(1, row)}>查看</a>}
+                  >
+                    {(baseColumn as any[])
+                      .filter((col) => col.dataIndex && col.dataIndex !== 'action')
+                      .map((col) => (
+                        <div key={col.dataIndex} style={{ marginBottom: 8, wordBreak: 'break-all' }}>
+                          <Typography.Text type="secondary">{col.title}：</Typography.Text>
+                          <span>{String(row[col.dataIndex] ?? '—')}</span>
+                        </div>
+                      ))}
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+            <Pagination
+              style={{ marginTop: 18, textAlign: 'right' }}
+              current={pagination.current}
+              pageSize={pagination.pageSize}
+              total={pagination.total}
+              showSizeChanger
+              onChange={(page, size) => handleSearch({ pageNum: page, pageSize: size })}
+              showTotal={(total) => `共 ${total} 条`}
+            />
+          </>
+        ) : (
+          <Table
           className="jykj-custom-table-header"
           // columns={baseColumn}
           columns={baseColumn}
@@ -446,6 +539,7 @@ const SearchList: React.FC = () => {
           // pagination={false}
           style={{ marginTop: '20px' }}
         />
+        )}
       </div>
       {isShow360View ? (
         <iframe
