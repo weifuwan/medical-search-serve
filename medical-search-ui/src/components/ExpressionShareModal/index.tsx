@@ -41,6 +41,7 @@ const ExpressionShareModal: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [scope, setScope] = useState<'USERS' | 'HOSPITAL'>('USERS');
   const [users, setUsers] = useState<{ label: string; value: number }[]>([]);
+  const [expirationChange, setExpirationChange] = useState<'KEEP' | 1 | 7 | 30>('KEEP');
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +50,7 @@ const ExpressionShareModal: React.FC<Props> = ({
     setRecord(undefined);
     setScope('USERS');
     setUsers([]);
+    setExpirationChange('KEEP');
     form.setFieldsValue({
       title: expression ? expression.slice(0, 50) : '共享检索条件',
       expression: expression || '',
@@ -118,8 +120,20 @@ const ExpressionShareModal: React.FC<Props> = ({
       }
 
       setSaving(true);
+      const updateValues: ShareInput = {
+        title: values.title,
+        expression: values.expression,
+        scope: values.scope,
+        permission: values.permission,
+        userIds: values.userIds,
+        version: record?.version,
+      };
+      if (expirationChange !== 'KEEP') {
+        updateValues.expiresInDays = expirationChange;
+      }
+
       const response = record
-        ? await updateShare(record.code, { ...values, version: record.version })
+        ? await updateShare(record.code, updateValues)
         : await createShare(values);
 
       if (response.code !== 0 || !response.data) {
@@ -127,6 +141,8 @@ const ExpressionShareModal: React.FC<Props> = ({
       }
 
       setRecord(response.data);
+      setExpirationChange('KEEP');
+      form.setFieldsValue({ expiresInDays: undefined });
       message.success(record ? '分享设置已更新' : '分享链接已创建');
       onSaved?.();
     } catch (error: any) {
@@ -253,16 +269,43 @@ const ExpressionShareModal: React.FC<Props> = ({
                 <Radio value="EDIT">协作编辑表达式</Radio>
               </Radio.Group>
             </Form.Item>
-            <Form.Item name="expiresInDays" label="有效期">
-              <Select
-                allowClear={!!record}
-                placeholder={record ? '不修改当前有效期' : '请选择有效期'}
+            {!record ? (
+              <Form.Item
+                name="expiresInDays"
+                label="有效期"
+                rules={[{ required: true, message: '请选择有效期' }]}
               >
-                <Select.Option value={1}>1 天</Select.Option>
-                <Select.Option value={7}>7 天</Select.Option>
-                <Select.Option value={30}>30 天</Select.Option>
-              </Select>
-            </Form.Item>
+                <Select>
+                  <Select.Option value={1}>1 天</Select.Option>
+                  <Select.Option value={7}>7 天</Select.Option>
+                  <Select.Option value={30}>30 天</Select.Option>
+                </Select>
+              </Form.Item>
+            ) : (
+              <>
+                <Form.Item label="当前到期时间">
+                  <Typography.Text strong>
+                    {record.expiresAt
+                      ? new Date(record.expiresAt).toLocaleString('zh-CN', { hour12: false })
+                      : '未设置'}
+                  </Typography.Text>
+                </Form.Item>
+                <Form.Item label="修改有效期">
+                  <Select
+                    value={expirationChange}
+                    onChange={setExpirationChange}
+                  >
+                    <Select.Option value="KEEP">保持当前到期时间不变</Select.Option>
+                    <Select.Option value={1}>从现在起重新计算 1 天</Select.Option>
+                    <Select.Option value={7}>从现在起重新计算 7 天</Select.Option>
+                    <Select.Option value={30}>从现在起重新计算 30 天</Select.Option>
+                  </Select>
+                  <Typography.Text type="secondary">
+                    不修改有效期时，保存其他设置不会延长分享期限。
+                  </Typography.Text>
+                </Form.Item>
+              </>
+            )}
           </>
         )}
       </Form>
