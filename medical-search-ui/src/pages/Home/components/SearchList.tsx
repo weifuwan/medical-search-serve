@@ -453,7 +453,15 @@ const SearchList: React.FC = () => {
         >
           分享检索
         </Button>
-        <SaveData saveParams={saveParams} disabled={loading} />
+        <Tooltip title={activeTemplate?.config.scopeExpression
+          ? '附加范围条件的检索暂不支持直接导出' : ''}>
+          <span>
+            <SaveData
+              saveParams={saveParams}
+              disabled={loading || !!activeTemplate?.config.scopeExpression}
+            />
+          </span>
+        </Tooltip>
       </div>
 
       <div>

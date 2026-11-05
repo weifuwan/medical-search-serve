@@ -623,6 +623,12 @@ public class ExpressionParserComponent {
 
                 if (baseColumns.isEmpty()) {
                     baseColumns = extractColumnsFromMergedResultsMap(visitInfo);
+                    Map<String, Integer> columnOrder = new HashMap<>();
+                    for (int columnIndex = 0; columnIndex < selectColumns.size(); columnIndex++) {
+                        columnOrder.put(selectColumns.get(columnIndex).getFieldCode(), columnIndex);
+                    }
+                    baseColumns.sort(Comparator.comparingInt(
+                            column -> columnOrder.getOrDefault(column.get("dataIndex"), Integer.MAX_VALUE)));
                 }
 
                 resultList.add(resultMap);

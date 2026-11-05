@@ -42,6 +42,9 @@ public class TemplateSearchConfig {
         }
         try {
             TemplateSearchConfig config = MAPPER.readValue(json, TemplateSearchConfig.class);
+            if (config == null) {
+                throw new BizException("模板检索参数不能为空对象");
+            }
             config.validate();
             return config;
         } catch (JsonProcessingException e) {
