@@ -300,20 +300,12 @@ const ExpressionShareModal: React.FC<Props> = ({
                     <Select.Option value={7}>从现在起重新计算 7 天</Select.Option>
                     <Select.Option value={30}>从现在起重新计算 30 天</Select.Option>
                   </Select>
-                  <Typography.Text type="secondary">
-                    不修改有效期时，保存其他设置不会延长分享期限。
-                  </Typography.Text>
                 </Form.Item>
               </>
             )}
           </>
         )}
       </Form>
-      {scope === 'HOSPITAL' && (
-        <Typography.Text type="secondary">
-          本院范围仅限当前集团和组织内的有效账号，不会授予额外的患者数据访问权限。
-        </Typography.Text>
-      )}
       {record?.status === 'REVOKED' && (
         <Alert type="warning" showIcon message="该分享已撤销，无法再次使用。" />
       )}
