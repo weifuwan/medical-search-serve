@@ -91,3 +91,35 @@
 .searchListSelectTable {
     background: rgb(194, 241, 231);
 }
+/* 收藏状态采用 Ant Design Gold 6，区分未收藏与已收藏。 */
+.favoriteAction {
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: #8c8c8c;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.favoriteAction:hover:not(:disabled) {
+    color: #faad14;
+    transform: scale(1.1);
+}
+
+.favoriteSelected,
+.favoriteSelected:hover:not(:disabled) {
+    color: #faad14;
+}
+
+.favoriteAction:focus-visible {
+    outline: 2px solid @primary-color;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.favoriteAction:disabled {
+    cursor: default;
+    opacity: 0.6;
+}

@@ -12,6 +12,10 @@ declare namespace HOME {
     loading: boolean;
     list: HistoryOrHotItem[];
     handleMore: () => void;
-    emptyText?: string
+    emptyText?: string;
+    favoritedExpressions: string[];
+    favoritesReady: boolean;
+    pendingFavorites: string[];
+    onToggleFavorite: (expression: string) => void;
   }
 }

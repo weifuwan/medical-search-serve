@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { history, useDispatch } from '@umijs/max';
-import { Card, Col, message, Row, Space, Tooltip } from 'antd';
-import { ShareAltOutlined, StarOutlined } from '@ant-design/icons';
+import { Card, Col, Row, Space, Tooltip } from 'antd';
+import { ShareAltOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
 import NoData from '@/components/JYNoData';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
-import { addFavorite } from '@/services/expressionShare/api';
 import defaultSettings from '../../../../config/defaultSettings';
 import { setSessionVal } from '@/utils';
 import styles from '../index.less';
 
 const HomeList: React.FC<HOME.ListProps> = (props) => {
-  const { loading, list, handleMore, emptyText } = props;
+  const {
+    loading, list, handleMore, emptyText,
+    favoritedExpressions, favoritesReady, pendingFavorites, onToggleFavorite,
+  } = props;
   const dispatch = useDispatch();
   const [isShowMore, setIsShowMore] = useState(true);
   const [shareExpression, setShareExpression] = useState<string>();
@@ -27,16 +29,6 @@ const HomeList: React.FC<HOME.ListProps> = (props) => {
     }
     handleMore();
     setIsShowMore(false);
-  };
-
-  const favorite = async (expression: string) => {
-    try {
-      const response = await addFavorite(expression.slice(0, 50), expression);
-      if (response.code !== 0) throw new Error(response.msg || '收藏失败');
-      message.success('已保存到我的常用检索');
-    } catch {
-      message.error('收藏失败');
-    }
   };
 
   return (
@@ -61,13 +53,27 @@ const HomeList: React.FC<HOME.ListProps> = (props) => {
                 </Tooltip>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <Space size="middle">
-                    <Tooltip title="保存到常用检索">
-                      <StarOutlined
+                    <Tooltip title={
+                      !favoritesReady ? '正在加载收藏状态' :
+                      favoritedExpressions.includes(item.expression) ? '取消收藏' : '收藏检索条件'
+                    }>
+                      <button
+                        type="button"
+                        className={`${styles.favoriteAction} ${
+                          favoritedExpressions.includes(item.expression) ? styles.favoriteSelected : ''
+                        }`}
+                        aria-label={favoritedExpressions.includes(item.expression) ? '取消收藏' : '收藏检索条件'}
+                        aria-pressed={favoritedExpressions.includes(item.expression)}
+                        disabled={!favoritesReady || pendingFavorites.includes(item.expression)}
                         onClick={(event) => {
                           event.stopPropagation();
-                          favorite(item.expression);
+                          onToggleFavorite(item.expression);
                         }}
-                      />
+                      >
+                        {favoritedExpressions.includes(item.expression)
+                          ? <StarFilled />
+                          : <StarOutlined />}
+                      </button>
                     </Tooltip>
                     <Tooltip title="分享检索条件">
                       <ShareAltOutlined
