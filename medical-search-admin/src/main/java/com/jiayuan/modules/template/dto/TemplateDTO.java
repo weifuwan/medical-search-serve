@@ -34,6 +34,9 @@ public class TemplateDTO implements Serializable {
     @ApiModelProperty(value = "表达式")
     private String expression;
 
+    @ApiModelProperty(value = "检索模板参数 JSON")
+    private String searchConfig;
+
     @EnumList(value = BizConstant.UseScope.class, message = "使用范围类型不合法")
     @ApiModelProperty(value = "使用范围(0-全院 1-个人)")
     private Integer useScope;

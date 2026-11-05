@@ -6,6 +6,7 @@
     <resultMap type="com.jiayuan.modules.template.entity.TemplateEntity" id="templateMap">
         <result property="id" column="id"/>
         <result property="templateName" column="template_name"/>
+        <result property="searchConfig" column="search_config"/>
         <result property="useScope" column="use_scope"/>
         <result property="sort" column="sort"/>
         <result property="isDeleted" column="is_deleted"/>

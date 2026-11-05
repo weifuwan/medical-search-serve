@@ -5,6 +5,10 @@ declare namespace HOMEAPI {
     type SearchParams = {
         dimension: number;
         expression: string;
+        templateId?: number | string;
+        orderTableCode?: string;
+        orderFieldCode?: string;
+        orderMode?: string;
         page: number;
         size: number;
     }

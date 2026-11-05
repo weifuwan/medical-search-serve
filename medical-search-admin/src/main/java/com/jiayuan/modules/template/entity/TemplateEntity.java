@@ -32,4 +32,6 @@ public class TemplateEntity extends BaseExDomain {
      * 检索表达式
      */
     private String expression;
+
+    private String searchConfig;
 }
