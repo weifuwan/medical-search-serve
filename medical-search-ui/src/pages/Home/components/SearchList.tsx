@@ -9,9 +9,8 @@ import './index.less';
 import SearchInput from './SearchInput';
 
 import { findListByBatchType, getSearchListV2, queryEmr } from '@/services/home/api';
-import { CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, ShareAltOutlined } from '@ant-design/icons';
 import SaveData from './SaveData';
-import { ShareAltOutlined } from '@ant-design/icons';
 import ExpressionShareModal from '@/components/ExpressionShareModal';
 import { getSessionVal } from '@/utils';
 

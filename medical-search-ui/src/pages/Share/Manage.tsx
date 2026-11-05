@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { history, useDispatch } from '@umijs/max';
 import {
   Button,
@@ -43,7 +43,7 @@ const ShareManage: React.FC = () => {
   const [logs, setLogs] = useState<ShareLog[]>([]);
   const [logsVisible, setLogsVisible] = useState(false);
 
-  const refresh = async (active: ActiveTab = tab) => {
+  const refresh = useCallback(async (active: ActiveTab = tab) => {
     setLoading(true);
     try {
       if (active === 'favorites') {
@@ -60,11 +60,11 @@ const ShareManage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tab]);
 
   useEffect(() => {
     refresh(tab);
-  }, [tab]);
+  }, [tab, refresh]);
 
   const openShare = (item: ShareItem) => history.push('/share/' + item.code);
 

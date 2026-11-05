@@ -153,7 +153,7 @@ const SearchInput: React.FC<SearchInputProps> = (props) => {
           dispatch({ type: 'searchModel/reset' });
           history.push({
             pathname: '/home/searchList',
-            search: `?searchParams=${getSessionVal('searchVal')}`,
+            search: `?searchParams=${encodeURIComponent(getSessionVal('searchVal'))}`,
           });
         } else {
           const searchVal = getSessionVal('searchVal');

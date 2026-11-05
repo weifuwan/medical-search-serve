@@ -37,6 +37,9 @@ public class ExpressionShareService {
         if (user.getUserId() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
         }
+        if (user.getGroupCode() == null || user.getOrganizationCode() == null) {
+            throw new BizException("当前账号缺少集团或组织信息，无法使用分享功能");
+        }
         return user;
     }
 

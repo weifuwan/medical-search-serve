@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { history, useDispatch, useParams } from '@umijs/max';
 import {
   Alert,
@@ -33,7 +33,7 @@ const SharedExpression: React.FC = () => {
   const [expression, setExpression] = useState('');
   const [manageOpen, setManageOpen] = useState(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getShare(code!);
@@ -49,11 +49,11 @@ const SharedExpression: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [code]);
 
   useEffect(() => {
     if (code) refresh();
-  }, [code]);
+  }, [code, refresh]);
 
   const search = () => {
     if (!record) return;
