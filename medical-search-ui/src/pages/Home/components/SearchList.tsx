@@ -1,5 +1,5 @@
 import { useLocation, useModel, useSelector } from '@umijs/max';
-import { Table, Tooltip } from 'antd';
+import { Button, message, Table, Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import type { IndexModelState } from '@/models/searchModel';
@@ -9,9 +9,10 @@ import './index.less';
 import SearchInput from './SearchInput';
 
 import { findListByBatchType, getSearchListV2, queryEmr } from '@/services/home/api';
-import { CloseOutlined } from '@ant-design/icons';
-import { Button, message } from 'antd/lib';
+import { CloseOutlined, ShareAltOutlined } from '@ant-design/icons';
 import SaveData from './SaveData';
+import ExpressionShareModal from '@/components/ExpressionShareModal';
+import { getSessionVal } from '@/utils';
 
 interface DataType {
   empiID: string;
@@ -41,8 +42,9 @@ const SearchList: React.FC = () => {
   const location = useLocation();
   // const searchParams = ;
   const [searchParams, setSearchParams] = useState(
-    decodeURIComponent(location.search.split('searchParams=')[1] || ''),
+    new URLSearchParams(location.search).get('searchParams') || getSessionVal('searchVal') || '',
   );
+  const [shareOpen, setShareOpen] = useState(false);
   const showUpdate = useSelector(
     (state: { searchModel: IndexModelState }) => state.searchModel.showUpdate,
   );
@@ -406,6 +408,14 @@ const SearchList: React.FC = () => {
       />
 
       <div className="flx-justify-end" style={{ marginBottom: 12 }}>
+        <Button
+          style={{ marginRight: 12 }}
+          icon={<ShareAltOutlined />}
+          disabled={!searchParams.trim()}
+          onClick={() => setShareOpen(true)}
+        >
+          分享检索
+        </Button>
         <SaveData saveParams={saveParams} disabled={loading} />
       </div>
 
@@ -522,6 +532,11 @@ const SearchList: React.FC = () => {
                     :
                     <></>
             } */}
+      <ExpressionShareModal
+        open={shareOpen}
+        expression={searchParams}
+        onClose={() => setShareOpen(false)}
+      />
     </PageContainer>
   );
 };

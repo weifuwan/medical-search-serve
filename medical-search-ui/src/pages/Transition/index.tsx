@@ -29,7 +29,10 @@ const TransitionPage: React.FC = () => {
             // setSessionVal('hispitalName', data.filter((item: { paramCode: string }) => item.paramCode === 'HOSPITAL_NAME')[0].paramValue)
         }
 
-        const url = permissionList?.length ? permissionList[0].url : '/help'
+        const returnTo = sessionStorage.getItem('expressionShareReturnTo')
+        sessionStorage.removeItem('expressionShareReturnTo')
+        const url = returnTo?.startsWith('/share/') ? returnTo :
+            permissionList?.length ? permissionList[0].url : '/help'
         history.push(url)
     }
 

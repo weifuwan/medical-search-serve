@@ -14,6 +14,12 @@ import { getLocalVal, getToken } from './utils';
 
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
+const saveShareReturnPath = () => {
+  const returnPath = window.location.pathname + window.location.search;
+  if (window.location.pathname.startsWith('/share/')) {
+    sessionStorage.setItem('expressionShareReturnTo', returnPath);
+  }
+};
 
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
@@ -39,6 +45,7 @@ export async function getInitialState(): Promise<{
       return res.data;
       // return {}
     } catch (error) {
+      saveShareReturnPath();
       history.push(loginPath);
     }
     return undefined;
@@ -138,6 +145,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
       const { location } = history;
       // 如果没有登录，重定向到 login
       if (!getToken() && location.pathname !== loginPath) {
+        saveShareReturnPath();
         message.error('登录过期！请重新登录！');
         history.push(loginPath);
       }
