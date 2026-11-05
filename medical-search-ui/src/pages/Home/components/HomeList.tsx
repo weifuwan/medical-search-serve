@@ -64,9 +64,10 @@ const HomeList: React.FC<HOME.ListProps> = (props) => {
                         }`}
                         aria-label={favoritedExpressions.includes(item.expression) ? '取消收藏' : '收藏检索条件'}
                         aria-pressed={favoritedExpressions.includes(item.expression)}
-                        disabled={!favoritesReady || pendingFavorites.includes(item.expression)}
+                        aria-disabled={!favoritesReady || pendingFavorites.includes(item.expression)}
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (!favoritesReady || pendingFavorites.includes(item.expression)) return;
                           onToggleFavorite(item.expression);
                         }}
                       >
