@@ -203,7 +203,9 @@ public class ExpressionParserComponent {
                     request.getEsBatchSize(),
                     request.isExport(),
                     request.getOrderFieldCode(),
-                    request.getOrderMode()
+                    request.getOrderMode(),
+                    request.getScopeExpression(),
+                    request.getDimension()
             );
 
             log.info("Search completed successfully in {} ms. Results: {}",
@@ -239,7 +241,7 @@ public class ExpressionParserComponent {
                                                     int esBatchSize,
                                                     boolean isExport) throws Exception {
         return getOptimizedJoinedResultsCustom(condition, pageNum, pageSize,
-                selectColumns, esBatchSize, isExport, null, null);
+                selectColumns, esBatchSize, isExport, null, null, null, 0);
     }
 
     public SearchVo getOptimizedJoinedResultsCustom(String condition,
@@ -250,6 +252,20 @@ public class ExpressionParserComponent {
                                                     boolean isExport,
                                                     String orderFieldCode,
                                                     String orderMode) throws Exception {
+        return getOptimizedJoinedResultsCustom(condition, pageNum, pageSize,
+                selectColumns, esBatchSize, isExport, orderFieldCode, orderMode, null, 0);
+    }
+
+    public SearchVo getOptimizedJoinedResultsCustom(String condition,
+                                                    int pageNum,
+                                                    int pageSize,
+                                                    List<FieldDTO> selectColumns,
+                                                    int esBatchSize,
+                                                    boolean isExport,
+                                                    String orderFieldCode,
+                                                    String orderMode,
+                                                    String scopeExpression,
+                                                    Integer dimension) throws Exception {
         if (StringUtils.isBlank(condition)) {
             throw new IllegalArgumentException("Search condition cannot be null or empty");
         }
@@ -273,7 +289,8 @@ public class ExpressionParserComponent {
             logCacheStatistics();
 
             return getOptimizedJoinedResults(
-                    applyOrder(cachedResults, conditionHash, orderFieldCode, orderMode),
+                    prepareResults(cachedResults, conditionHash, orderFieldCode, orderMode,
+                            scopeExpression, dimension),
                     pageNum,
                     pageSize,
                     selectColumns,
@@ -289,12 +306,102 @@ public class ExpressionParserComponent {
         log.info("Cached new results for condition hash: {}", conditionHash);
 
         return getOptimizedJoinedResults(
-                applyOrder(joinedResults, conditionHash, orderFieldCode, orderMode),
+                prepareResults(joinedResults, conditionHash, orderFieldCode, orderMode,
+                        scopeExpression, dimension),
                 pageNum,
                 pageSize,
                 selectColumns,
                 esBatchSize
         );
+    }
+
+    private NodeQueryVo prepareResults(NodeQueryVo base, String conditionHash,
+                                       String orderFieldCode, String orderMode,
+                                       String scopeExpression, Integer dimension) throws Exception {
+        NodeQueryVo filtered = applyScope(base, scopeExpression);
+        String scopeKey = scopeExpression == null ? "" : scopeExpression.trim();
+        String key = conditionHash + ":" + generateConditionHash(scopeKey);
+        NodeQueryVo ordered = applyOrder(filtered, key, orderFieldCode, orderMode);
+        return applyPatientDimension(ordered, key, orderFieldCode, orderMode, dimension);
+    }
+
+    private NodeQueryVo applyScope(NodeQueryVo base, String scopeExpression) throws Exception {
+        if (StringUtils.isBlank(scopeExpression) || base.getResult().isEmpty()) {
+            return base;
+        }
+
+        String condition = scopeExpression.trim();
+        String cacheKey = generateConditionHash(condition);
+        NodeQueryVo scope = cache.getIfPresent(cacheKey);
+        if (scope == null) {
+            scope = getJoinedResults(condition);
+            cache.put(cacheKey, scope);
+        }
+
+        Set<String> accepted = new HashSet<>(scope.getResult());
+        List<String> filtered = new ArrayList<>();
+        for (String visitNo : base.getResult()) {
+            if (accepted.contains(visitNo)) {
+                filtered.add(visitNo);
+            }
+        }
+        return new NodeQueryVo(filtered, base.getQueries());
+    }
+
+    private NodeQueryVo applyPatientDimension(NodeQueryVo base, String conditionHash,
+                                              String fieldCode, String mode,
+                                              Integer dimension) throws IOException {
+        if (!Integer.valueOf(1).equals(dimension) || base.getResult().isEmpty()) {
+            return base;
+        }
+
+        String cacheKey = conditionHash + ":patient:" + fieldCode + ":" + mode;
+        List<String> selected = orderCache.getIfPresent(cacheKey);
+        if (selected == null) {
+            selected = distinctPatientVisits(base.getResult());
+            orderCache.put(cacheKey, selected);
+        }
+        return new NodeQueryVo(selected, base.getQueries());
+    }
+
+    private List<String> distinctPatientVisits(List<String> visitNumbers) throws IOException {
+        Map<String, String> patientsByVisit = new HashMap<>();
+        SearchSourceBuilder source = new SearchSourceBuilder()
+                .query(QueryBuilders.termsQuery("visit_no.keyword", visitNumbers))
+                .fetchSource(new String[]{"visit_no", "patient_id"}, new String[0])
+                .sort("visit_no.keyword", SortOrder.ASC)
+                .size(1000);
+
+        while (true) {
+            org.elasticsearch.action.search.SearchRequest request =
+                    new org.elasticsearch.action.search.SearchRequest(VISIT_RECORD_INDEX).source(source);
+            SearchHit[] hits = client.search(request, RequestOptions.DEFAULT).getHits().getHits();
+            if (hits.length == 0) {
+                break;
+            }
+            for (SearchHit hit : hits) {
+                Map<String, Object> record = hit.getSourceAsMap();
+                if (record != null && record.get("visit_no") != null) {
+                    String visitNo = record.get("visit_no").toString();
+                    Object patientId = record.get("patient_id");
+                    patientsByVisit.put(visitNo, patientId == null ? visitNo : patientId.toString());
+                }
+            }
+            if (hits.length < 1000) {
+                break;
+            }
+            source.searchAfter(hits[hits.length - 1].getSortValues());
+        }
+
+        Set<String> seenPatients = new HashSet<>();
+        List<String> selected = new ArrayList<>();
+        for (String visitNo : visitNumbers) {
+            String patientId = patientsByVisit.getOrDefault(visitNo, visitNo);
+            if (seenPatients.add(patientId)) {
+                selected.add(visitNo);
+            }
+        }
+        return selected;
     }
 
     private NodeQueryVo applyOrder(NodeQueryVo results, String conditionHash,

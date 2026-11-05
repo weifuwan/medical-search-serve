@@ -53,35 +53,42 @@ public class SearchServiceV2Impl implements SearchServiceV2 {
     public SearchVo search(SearchRequest request) {
         List<FieldDTO> columns = resultFieldService.getUserShowFieldList();
         if (request.getTemplateId() != null) {
-            TemplateDTO template = templateService.getById(request.getTemplateId());
+            TemplateDTO template = templateService.get(request.getTemplateId());
             if (template == null || (!Objects.equals(template.getUseScope(), 0)
                     && !Objects.equals(template.getCreator(), SecurityUser.getUserId()))) {
                 throw new BizException("无权使用该检索模板");
             }
             TemplateSearchConfig config = TemplateSearchConfig.parse(template.getSearchConfig());
             if (config != null) {
-                if (config.getScopeExpression() != null && !config.getScopeExpression().trim().isEmpty()) {
-                    request.setExpression(request.getExpression() + " AND " + config.getScopeExpression().trim());
+                request.setScopeExpression(config.getScopeExpression());
+                if (config.getDimension() != null) {
+                    request.setDimension(config.getDimension());
                 }
-                if (config.getSort() != null) {
-                    request.setOrderTableCode("ms_visit_record");
-                    request.setOrderFieldCode(config.getSort().getFieldCode());
-                    request.setOrderMode(config.getSort().getMode());
-                }
-                if (config.getColumns() != null && !config.getColumns().isEmpty()) {
+                if (config.getSort() != null ||
+                        config.getColumns() != null && !config.getColumns().isEmpty()) {
                     Map<String, FieldDTO> available = new LinkedHashMap<>();
                     for (FieldDTO field : tableFieldService.getShowFieldsByTableId("ms_visit_record")) {
                         available.put(field.getFieldCode(), field);
                     }
-                    List<FieldDTO> selected = new ArrayList<>();
-                    for (TemplateSearchConfig.Column column : config.getColumns()) {
-                        FieldDTO field = available.get(column.getFieldCode());
-                        if (field == null) {
-                            throw new BizException("检索模板中的展示字段已不可用: " + column.getFieldCode());
+                    if (config.getSort() != null) {
+                        if (!available.containsKey(config.getSort().getFieldCode())) {
+                            throw new BizException("检索模板中的排序字段已不可用");
                         }
-                        selected.add(field);
+                        request.setOrderTableCode("ms_visit_record");
+                        request.setOrderFieldCode(config.getSort().getFieldCode());
+                        request.setOrderMode(config.getSort().getMode());
                     }
-                    columns = selected;
+                    if (config.getColumns() != null && !config.getColumns().isEmpty()) {
+                        List<FieldDTO> selected = new ArrayList<>();
+                        for (TemplateSearchConfig.Column column : config.getColumns()) {
+                            FieldDTO field = available.get(column.getFieldCode());
+                            if (field == null) {
+                                throw new BizException("检索模板中的展示字段已不可用: " + column.getFieldCode());
+                            }
+                            selected.add(field);
+                        }
+                        columns = selected;
+                    }
                 }
             }
         }
