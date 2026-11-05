@@ -95,3 +95,15 @@ export async function removeRule(options?: { [key: string]: any }) {
     ...(options || {}),
   });
 }
+
+
+export async function getLoginBranding(options?: { [key: string]: any }) {
+  return request<{
+    code: number;
+    data?: { hospitalName?: string; logoBase64?: string };
+    msg?: string;
+  }>('/medical-search-admin/login/branding', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}

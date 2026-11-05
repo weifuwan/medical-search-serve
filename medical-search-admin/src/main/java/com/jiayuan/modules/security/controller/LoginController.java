@@ -22,6 +22,8 @@ import com.jiayuan.modules.security.user.SecurityUser;
 import com.jiayuan.modules.security.user.UserDetail;
 import com.jiayuan.modules.sso.service.SsoService;
 import com.jiayuan.modules.sys.dto.SysUserDTO;
+import com.jiayuan.modules.sys.entity.HospitalConfigEntity;
+import com.jiayuan.modules.sys.service.SysParamsService;
 import com.jiayuan.modules.sys.enums.UserStatusEnum;
 import com.jiayuan.modules.sys.service.SysUserService;
 import io.swagger.annotations.Api;
@@ -35,6 +37,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -55,6 +59,7 @@ public class LoginController {
     private final LogLoginService logLoginService;
     private final SsoService ssoService;
     private final CustomConfig customConfig;
+    private final SysParamsService sysParamsService;
 
 
     @GetMapping("captcha")
@@ -66,6 +71,18 @@ public class LoginController {
 
         //生成验证码
         captchaService.create(response, uuid);
+    }
+
+    @GetMapping("login/branding")
+    @ApiOperation(value = "登录页医院信息")
+    public Result<Map<String, String>> loginBranding() {
+        HospitalConfigEntity config = sysParamsService.getHospitalConfig();
+        Map<String, String> branding = new HashMap<>();
+        if (config != null) {
+            branding.put("hospitalName", config.getHospitalName());
+            branding.put("logoBase64", config.getLogoBase64());
+        }
+        return Result.ok(branding);
     }
 
     @PostMapping("login")

@@ -1,65 +1,382 @@
-@import (reference) '~antd/es/style/themes/index';
-
-.primaryColor {
-    color: @primary-color;
-}
-
 .container {
-    display      : grid;
-    place-items  : center;
-    width        : 100%;
-    height       : 100%;
-    margin-bottom: -120px;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 580px);
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 48px 10vw 48px 8vw;
+  overflow: hidden;
+  background: #e9f9f6 url('/login_background.png') center 30% / cover no-repeat;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', sans-serif;
 }
 
-.content {
-    width : 500px;
-    height: 600px;
+.brand {
+  position: absolute;
+  top: clamp(50px, 11.5vh, 115px);
+  left: 8vw;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  max-width: 42vw;
+  color: #064740;
+  z-index: 1;
 }
 
-.loginHeader {
-    text-align   : center;
-    margin-bottom: 32px;
+.brandIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+}
+
+.medicalIcon,
+.hospitalLogo {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.hospitalLogo {
+  object-fit: contain;
+}
+
+.brandDivider {
+  flex: 0 0 1px;
+  height: 56px;
+  background: #a3c1c1;
+}
+
+.brandCopy {
+  min-width: 0;
+}
+
+.hospitalName {
+  font-size: 29px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.hospitalEnglish {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: .45px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.card {
+  grid-column: 2;
+  box-sizing: border-box;
+  width: 580px;
+  max-width: 100%;
+  padding: 43px 56px 40px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 18px 52px rgba(11, 84, 83, .08);
+  transform: translateY(-18px);
+  z-index: 1;
+}
+
+.title {
+  margin: 0;
+  color: #063d38;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.4;
+}
+
+.titleLine {
+  display: block;
+  width: 54px;
+  height: 5px;
+  margin-top: 11px;
+  border-radius: 10px;
+  background: #0ca990;
+}
+
+.description {
+  margin: 19px 0 27px;
+  color: #79858c;
+  font-size: 19px;
+  line-height: 1.6;
 }
 
 .loginForm {
-    width        : 380px;
-    height       : 440px;
-    padding      : 24px !important;
-    box-shadow   : 0 0 12px 0 rgb(189, 185, 185);
-    border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
 }
 
-@media (min-width: @screen-md-min) {
-    .container {
-        // background-image: url('https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/V-_oS6r-i7wAAAAAAAAAAAAAFl94AQBr');
-        background-size: cover;
-    }
-
-    .content {
-        padding: 32px 0 24px !important;
-    }
+.field {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 60px;
+  padding: 0 21px;
+  border: 1.5px solid #d9e1e5;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .8);
+  transition: border-color .2s, box-shadow .2s;
 }
 
-.prefixIcon {
-    color         : rgba(0, 0, 0, 0.2);
-    font-size     : 24px;
-    vertical-align: middle;
-    cursor        : pointer;
-    transition    : color 0.3s;
-
-    &:hover {
-        color: @primary-color;
-    }
+.field:focus-within {
+  border-color: #0da58e;
+  box-shadow: 0 0 0 3px rgba(13, 165, 142, .1);
 }
 
-.lang {
-    width      : 100%;
-    height     : 40px;
-    line-height: 44px;
-    text-align : right;
+.fieldIcon {
+  flex: 0 0 auto;
+  color: #87929b;
+  font-size: 23px;
+}
 
-    :global(.ant-dropdown-trigger) {
-        margin-right: 24px;
-    }
+.field input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  margin-left: 19px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #153d3a;
+  font: inherit;
+  font-size: 19px;
+}
+
+.field input::placeholder {
+  color: #858e95;
+  opacity: 1;
+}
+
+.visibilityButton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -4px 0 8px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: #87929b;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.visibilityButton:hover {
+  color: #0a9683;
+}
+
+.remember {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 12px;
+  margin-top: 8px;
+  color: #77838a;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.remember input {
+  box-sizing: border-box;
+  width: 23px;
+  height: 23px;
+  margin: 0;
+  accent-color: #0ba88e;
+  cursor: pointer;
+}
+
+.loginError {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff2f0;
+  color: #cf3b36;
+  font-size: 14px;
+}
+
+.submitButton {
+  width: 100%;
+  height: 60px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #0bab92, #0a9f90);
+  color: #fff;
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  transition: filter .2s, transform .2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  filter: brightness(.97);
+}
+
+.submitButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.securityNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 29px;
+  color: #89949b;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.securityNote :global(.anticon) {
+  font-size: 21px;
+}
+
+.securityLine {
+  flex: 1;
+  height: 1px;
+  background: #e2e7e9;
+}
+
+@media (max-width: 1180px) {
+  .container {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+    padding-right: 5vw;
+  }
+
+  .card {
+    width: 480px;
+    padding: 36px 38px;
+  }
+
+  .brand {
+    max-width: 45vw;
+  }
+
+  .hospitalName {
+    font-size: 24px;
+  }
+
+  .hospitalEnglish {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 860px) {
+  .container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 112px 20px 32px;
+    background-position: 28% center;
+  }
+
+  .container::before {
+    position: absolute;
+    inset: 0;
+    background: rgba(240, 253, 251, .56);
+    content: '';
+  }
+
+  .brand {
+    top: 27px;
+    left: 24px;
+    max-width: calc(100% - 48px);
+    gap: 12px;
+  }
+
+  .brandIcon,
+  .medicalIcon,
+  .hospitalLogo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brandIcon {
+    flex-basis: 44px;
+  }
+
+  .brandDivider {
+    height: 42px;
+  }
+
+  .card {
+    width: min(100%, 480px);
+    padding: 36px 32px 34px;
+    transform: none;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .description {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .container {
+    padding: 100px 16px 24px;
+  }
+
+  .brand {
+    left: 18px;
+  }
+
+  .hospitalName {
+    font-size: 20px;
+  }
+
+  .hospitalEnglish {
+    font-size: 10px;
+  }
+
+  .card {
+    padding: 30px 22px;
+    border-radius: 18px;
+  }
+
+  .field {
+    height: 54px;
+    padding: 0 14px;
+  }
+
+  .field input {
+    margin-left: 12px;
+    font-size: 16px;
+  }
+
+  .submitButton {
+    height: 54px;
+  }
+
+  .securityNote {
+    gap: 8px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field,
+  .submitButton {
+    transition: none;
+  }
 }
