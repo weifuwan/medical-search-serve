@@ -94,6 +94,17 @@ export default [
     ]
   },
   {
+    name: '我的分享',
+    icon: 'shareAlt',
+    path: '/share/manage',
+    component: './Share/Manage',
+  },
+  {
+    path: '/share/:code',
+    hideInMenu: true,
+    component: './Share/Detail',
+  },
+  {
     name: '检索模板',
     icon: 'search',
     path: '/searchTemplate',

@@ -127,23 +127,30 @@ public class ExpressionShareService {
     }
 
     private String memberPermission(ExpressionShareRecord record, UserDetail user) {
-        if ("HOSPITAL".equals(record.getScope())) {
-            if (Objects.equals(record.getGroupCode(), user.getGroupCode()) &&
-                    Objects.equals(record.getOrganizationCode(), user.getOrganizationCode())) {
-                return record.getPermission();
-            }
+        if (!Objects.equals(record.getGroupCode(), user.getGroupCode()) ||
+                !Objects.equals(record.getOrganizationCode(), user.getOrganizationCode())) {
             return null;
+        }
+        if ("HOSPITAL".equals(record.getScope())) {
+            return record.getPermission();
         }
         return repository.memberPermission(record.getId(), user.getUserId());
     }
 
+    private boolean expired(ExpressionShareRecord record) {
+        return record.getExpiresAt() != null &&
+                !record.getExpiresAt().toInstant().isAfter(Instant.now());
+    }
+
     private void authorize(ExpressionShareRecord record, UserDetail user, boolean edit) {
-        if (!"ACTIVE".equals(record.getStatus()) ||
-                (record.getExpiresAt() != null && !record.getExpiresAt().toInstant().isAfter(Instant.now()))) {
-            throw new ResponseStatusException(HttpStatus.GONE, "分享已失效或被撤销");
-        }
         if (owner(record, user)) {
+            if (edit && !"ACTIVE".equals(record.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.GONE, "分享已撤销");
+            }
             return;
+        }
+        if (!"ACTIVE".equals(record.getStatus()) || expired(record)) {
+            throw new ResponseStatusException(HttpStatus.GONE, "分享已失效或被撤销");
         }
         String granted = memberPermission(record, user);
         if (granted == null || (edit && !"EDIT".equals(granted))) {
@@ -168,7 +175,8 @@ public class ExpressionShareService {
         m.put("updatedAt", record.getUpdatedAt());
         m.put("version", record.getVersion());
         m.put("canManage", isOwner);
-        m.put("canEdit", isOwner || "EDIT".equals(granted));
+        m.put("canEdit", "ACTIVE".equals(record.getStatus()) &&
+                (isOwner || "EDIT".equals(granted)));
         if (isOwner) {
             m.put("userIds", repository.members(record.getId()));
         }
@@ -282,6 +290,9 @@ public class ExpressionShareService {
         if (originCode != null && !originCode.isEmpty()) {
             ExpressionShareRecord origin = get(originCode);
             authorize(origin, user, false);
+            if (!"ACTIVE".equals(origin.getStatus()) || expired(origin)) {
+                throw new ResponseStatusException(HttpStatus.GONE, "分享已失效或被撤销");
+            }
             input.setTitle(origin.getTitle());
             input.setExpression(origin.getExpression());
             originId = origin.getId();
