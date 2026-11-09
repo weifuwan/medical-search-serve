@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ProForm, ProFormInstance, ProFormRadio, ProFormText } from '@ant-design/pro-components';
-import { Input, Transfer, Tree, Space, Button, message, Spin, Radio, Select } from 'antd';
+import { Input, Transfer, Tree, message, Spin, Radio, Select } from 'antd';
 import { difference } from 'lodash';
 import { getPageClassify } from '@/services/fieldManage/table';
 import {
@@ -31,6 +31,10 @@ interface IUProps {
     handleFinish: () => void;
 }
 
+export interface IUEditorRef {
+    submit: () => void;
+}
+
 // 重新格式化 tree
 const generateTree = (treeNodes: DataNode[] = [], checkedKeys: string[] = []): DataNode[] =>
     treeNodes.map(({ children, ...props }) => ({
@@ -39,7 +43,7 @@ const generateTree = (treeNodes: DataNode[] = [], checkedKeys: string[] = []): D
         children: generateTree(children, checkedKeys),
     }))
 
-const IU: React.FC<IUProps> = (props) => {
+const IU = forwardRef<IUEditorRef, IUProps>((props, ref) => {
     const { isUpdate, templateId, handleFinish } = props
     const childRef = useRef()
     const templateFormRef = useRef<ProFormInstance>()
@@ -64,8 +68,6 @@ const IU: React.FC<IUProps> = (props) => {
     const [pageLoading, setPageLoading] = useState(false)
     // const [isShowPreview, setIsShowPreview] = useState(false)
     // const [previewLoading, setPreviewLoading] = useState(false)
-    const [saveLoading, setSaveLoading] = useState(false)
-    const [saveOnLoading, setSaveOnLoading] = useState(false)
     const transferDataSource: TransferItem[] = []
     const transferDataSource1: TransferItem[] = []
 
@@ -254,34 +256,26 @@ const IU: React.FC<IUProps> = (props) => {
         } else {
             message.error(msg)
         }
-        setSaveLoading(false)
-        setSaveOnLoading(false)
     }
 
-    // 预览/保存/保存并继续（点击事件）
-    const actionClick = (num: number) => {
-        if (num === 3) {
-          handleFinish()
-          return
-        }
+    const submit = () => {
         templateFormRef.current?.validateFieldsReturnFormatValue?.().then((formValues: STEMPLATEAPI.TemplateListItem) => {
             const cRef: any = childRef?.current
-            cRef?.getTableData().then((tableValues: STEMPLATEAPI.TemplateField[]) => {
-                switch (num) {
-                    case 1:// 预览
-                        // setPreviewLoading(true)
-                        // handlePreviewTemplate(formValues, tableValues)
-                        break;
-                    case 2:// 保存
-                        setSaveLoading(true)
-                        handleIUTemplate(formValues, tableValues, false)
-                        break;
-                    default:
-                        break;
-                }
+            const tableDataPromise = cRef?.getTableData?.()
+
+            if (!tableDataPromise) {
+                return
+            }
+
+            tableDataPromise.then((tableValues: STEMPLATEAPI.TemplateField[]) => {
+                handleIUTemplate(formValues, tableValues, false)
             })
         })
     }
+
+    useImperativeHandle(ref, () => ({
+        submit,
+    }))
 
   
     // 穿梭框回调
@@ -518,19 +512,9 @@ const IU: React.FC<IUProps> = (props) => {
                     )}
                 </div>
 
-                <div className="search-template-footer">
-                    <Space size="middle">
-                        <Button onClick={() => actionClick(3)} loading={saveOnLoading}>
-                            取消
-                        </Button>
-                        <Button type="primary" onClick={() => actionClick(2)} loading={saveLoading}>
-                            保存
-                        </Button>
-                    </Space>
-                </div>
             </div>
         </Spin>
     )
-}
+})
 
 export default IU;
