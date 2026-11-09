@@ -362,7 +362,8 @@ const IU: React.FC<IUProps> = (props) => {
     return (
         <Spin spinning={pageLoading} className="search-template-editor-spin">
             <div className="search-template-editor">
-                <div className="search-template-basic-section">
+                <div className="search-template-scroll-body">
+                    <div className="search-template-basic-section">
                     <ProForm<STEMPLATEAPI.TemplateListItem>
                         className="search-template-basic-form"
                         formRef={templateFormRef}
@@ -509,12 +510,13 @@ const IU: React.FC<IUProps> = (props) => {
                     </Transfer>
                 </div>
 
-                {previewData && (
-                    <div className="etable-preview-footer break-word">
-                        <span className="etable-preview-label">条件预览</span>
-                        <span>{previewData}</span>
-                    </div>
-                )}
+                    {previewData && (
+                        <div className="etable-preview-footer break-word">
+                            <span className="etable-preview-label">条件预览</span>
+                            <span>{previewData}</span>
+                        </div>
+                    )}
+                </div>
 
                 <div className="search-template-footer">
                     <Space size="middle">
