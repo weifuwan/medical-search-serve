@@ -23,6 +23,7 @@
 }
 
 .search-template-editor {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -36,6 +37,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
+    padding-bottom: 64px;
 }
 
 .search-template-basic-section {
@@ -203,9 +205,12 @@
 }
 
 .search-template-footer {
-    flex: none;
-    margin-top: 10px;
-    padding-top: 10px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    padding: 12px 0 0;
     border-top: 1px solid #f0f0f0;
     background: #fff;
     text-align: right;
