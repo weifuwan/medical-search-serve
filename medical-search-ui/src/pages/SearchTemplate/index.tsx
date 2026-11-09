@@ -10,12 +10,13 @@ import {
 
 import { getTemplateList, dTemplate } from '@/services/searchTemplate/api'
 import JYModal from "@/components/JYModal"
-import IU from './components/IU'
+import IU, { type IUEditorRef } from './components/IU'
 import RemoveConfirm from '@/components/JYRemoveConfirm'
 
 // 检索模版
 const SearchTemplate: React.FC = () => {
     const actionRef = useRef<ActionType>();
+    const editorRef = useRef<IUEditorRef>(null)
     const [selectedRows, setSelectedRows] = useState<STEMPLATEAPI.TemplateListItem[]>([])
     const [templateId, setTemplateId] = useState<string | number>('')
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -229,10 +230,20 @@ const SearchTemplate: React.FC = () => {
                 className="search-template-modal"
                 centered
                 isModalOpen={isModalOpen}
-                ChildNode={() => <IU isUpdate={isUpdate} handleFinish={handleOk} templateId={templateId} />}
+                ChildNode={() => (
+                    <IU
+                        ref={editorRef}
+                        isUpdate={isUpdate}
+                        handleFinish={handleOk}
+                        templateId={templateId}
+                    />
+                )}
                 handleCancel={handleCancel}
                 maskClosable={false}
-                footer={null}
+                footer={[
+                    <Button key="cancel" onClick={handleCancel}>取消</Button>,
+                    <Button key="save" type="primary" onClick={() => editorRef.current?.submit()}>保存</Button>,
+                ]}
             />
         </PageContainer>
     )
