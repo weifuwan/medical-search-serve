@@ -115,11 +115,20 @@
     flex: 1;
     min-height: 0;
     margin-top: 12px;
+    overflow: hidden;
+    align-items: stretch;
 }
 
 .search-template-transfer .ant-transfer-list {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
+    overflow: hidden;
+}
+
+.search-template-transfer .ant-transfer-list-header {
+    flex: none;
 }
 
 .search-template-transfer .ant-transfer-list:first-child {
@@ -133,13 +142,21 @@
 }
 
 .search-template-transfer .ant-transfer-list-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     min-height: 0;
     overflow: hidden;
 }
 
 .search-template-transfer .ant-transfer-list-body-customize-wrapper {
-    height: 100%;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 .search-template-transfer .ant-transfer-operation {
@@ -184,7 +201,9 @@
     flex: 1;
     min-height: 0;
     margin-top: 8px;
+    padding-right: 4px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .etable-preview-footer {
