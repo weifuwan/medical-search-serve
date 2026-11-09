@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ProForm, ProFormInstance, ProFormRadio, ProFormSelect, ProFormText } from '@ant-design/pro-components';
-import { Input, Transfer, Tree, Space, Button, message, Spin } from 'antd';
+import { ProForm, ProFormInstance, ProFormRadio, ProFormText } from '@ant-design/pro-components';
+import { Input, Transfer, Tree, Space, Button, message, Spin, Radio, Select } from 'antd';
 import { difference } from 'lodash';
 import { getPageClassify } from '@/services/fieldManage/table';
 import {
@@ -43,7 +43,6 @@ const IU: React.FC<IUProps> = (props) => {
     const { isUpdate, templateId, handleFinish } = props
     const childRef = useRef()
     const templateFormRef = useRef<ProFormInstance>()
-    const formRef = useRef<ProFormInstance>()
     const [classifyId, setClassifyId] = useState('')
     const [searchType, setSearchType] = useState(2)
     const [searchName, setSearchName] = useState('')
@@ -152,18 +151,15 @@ const IU: React.FC<IUProps> = (props) => {
         setPageLoading(false)
     }
 
-    // 表单数据变化时
-    const formChange = (e: any) => {
-        if (e && e['type']) {
-            const typeVal = e['type']
-            setSearchType(typeVal)
-            return
-        }
-
-        const classifyIdVal = formRef.current?.getFieldValue('classifyId')
-        setClassifyId(classifyIdVal)
+    const handleClassifyChange = (value?: string) => {
+        const nextValue = value || ''
+        setClassifyId(nextValue)
         setSearchName('')
-        handleTreeList('', classifyIdVal)
+        handleTreeList('', nextValue)
+    }
+
+    const handleSearchTypeChange = (type: number) => {
+        setSearchType(type)
     }
 
     // tree 搜索
@@ -364,167 +360,170 @@ const IU: React.FC<IUProps> = (props) => {
     }, [isUpdate])
 
     return (
-        <Spin spinning={pageLoading}>
-            <ProForm<STEMPLATEAPI.TemplateListItem>
-                formRef={templateFormRef}
-                layout="horizontal"
-                onFinish={async (values) => {
-                }}
-                initialValues={{
-                    templateName: '',
-                    useScope: 1,
-                }}
-                submitter={false}
-            >
-                <ProForm.Group>
-                    <ProFormText
-                        width={220}
-                        name="templateName"
-                        label="模版名称"
-                        placeholder="请请输入名称进行搜索"
-                        rules={[
-                            { required: true, message: '请输入模版名称！' },
-                        ]}
-                    />
-                    <ProFormRadio.Group
-                        label="模版使用范围"
-                        name="useScope"
-                        options={[
-                            {
-                                label: '全院',
-                                value: 0,
-                            },
-                            {
-                                label: '个人',
-                                value: 1,
-                            },
-                        ]}
-                    />
-                </ProForm.Group>
-            </ProForm>
-            <SearchConfigEditor
-                value={searchConfig}
-                onChange={setSearchConfig}
-                fields={saveTransferData
-                    .filter((item: any) => item.tableCode === 'ms_visit_record' && item.fieldCode)
-                    .map((item: any) => ({
-                        fieldCode: item.fieldCode,
-                        fieldName: item.fieldName,
-                    }))}
-            />
-            <Transfer
-                className="search-template-transfer"
-                dataSource={transferData}
-                targetKeys={targetKeys}
-                render={item => item.title!}
-                showSelectAll={false}
-                onChange={onChange}
-                selectAllLabels={[<span>{targetKeys.length}/{saveTransferData.length}项</span>, <span>{alreadyTableData.length}项</span>]}
-                titles={[<h4>选择字段</h4>, <h4>已选择结果</h4>]}
-                oneWay
-            >
-                {
-                    ({ direction, selectedKeys, onItemSelectAll, onItemSelect, filteredItems }) => {
-                        if (direction === 'left') {
-                            const checkedKeys = [...selectedKeys, ...targetKeys]
-                            
-                            return (
-                                <>
-                                    <ProForm
-                                        style={{ margin: '12px 4px 0 12px' }}
-                                        formRef={formRef}
-                                        layout="horizontal"
-                                        submitter={false}
-                                        onValuesChange={formChange}
-                                    >
-                                        <ProFormSelect
-                                            name="classifyId"
-                                            label="分类"
-                                            showSearch
-                                            placeholder="请选择"
-                                            options={pageClassifyData}
-                                        />
-                                        <ProFormRadio.Group
-                                            name="type"
-                                            label="类型："
-                                            fieldProps={{ defaultValue: 2 }}
-                                            options={[
-                                                {
-                                                    label: '关键词',
-                                                    value: 2,
-                                                },
-                                                {
-                                                    label: '数据集',
-                                                    value: 1,
-                                                },
-                                            ]}
-                                        />
-                                    </ProForm>
-                                    <Search
-                                        allowClear
-                                        value={searchName}
-                                        style={{ width: '95%', margin: '4px 12px 12px 12px' }}
-                                        placeholder="请输入名称进行搜索"
-                                        onSearch={handleSearch}
-                                        onChange={searchValChange}
-                                    />
-                                    <Tree
-                                        checkable
-                                        blockNode
-                                        height={312}
-                                        defaultExpandAll
-                                        checkedKeys={checkedKeys}
-                                        treeData={generateTree(treeData, targetKeys)}
-                                        onCheck={(_, { node: { key, checked } }) => {
-                                            const fatherList = treeData.filter(item => key === item.key)
-                                            const isCheck = !checked
-                                            // if (fatherList.length > 0) {
-                                            const keys = _ as string[]
-                                            
-                                            const diffKeys = isCheck
-                                                ? difference(keys, selectedKeys)
-                                                : difference(selectedKeys, keys)
+        <Spin spinning={pageLoading} className="search-template-editor-spin">
+            <div className="search-template-editor">
+                <div className="search-template-basic-section">
+                    <ProForm<STEMPLATEAPI.TemplateListItem>
+                        className="search-template-basic-form"
+                        formRef={templateFormRef}
+                        layout="horizontal"
+                        onFinish={async () => {
+                        }}
+                        initialValues={{
+                            templateName: '',
+                            useScope: 1,
+                        }}
+                        submitter={false}
+                    >
+                        <ProForm.Group>
+                            <ProFormText
+                                width={260}
+                                name="templateName"
+                                label="模板名称"
+                                placeholder="请输入模板名称"
+                                rules={[
+                                    { required: true, message: '请输入模板名称！' },
+                                ]}
+                            />
+                            <ProFormRadio.Group
+                                label="使用范围"
+                                name="useScope"
+                                options={[
+                                    {
+                                        label: '全院',
+                                        value: 0,
+                                    },
+                                    {
+                                        label: '个人',
+                                        value: 1,
+                                    },
+                                ]}
+                            />
+                        </ProForm.Group>
+                    </ProForm>
+                </div>
 
-                                            onItemSelectAll(diffKeys as string[], isCheck)
-                                            // } else {
-                                            //     onItemSelect(key as string, isCheck);
-                                            // }
-                                        }}
+                <SearchConfigEditor
+                    value={searchConfig}
+                    onChange={setSearchConfig}
+                    fields={saveTransferData
+                        .filter((item: any) => item.tableCode === 'ms_visit_record' && item.fieldCode)
+                        .map((item: any) => ({
+                            fieldCode: item.fieldCode,
+                            fieldName: item.fieldName,
+                        }))}
+                />
+
+                <Transfer
+                    className="search-template-transfer"
+                    dataSource={transferData}
+                    targetKeys={targetKeys}
+                    render={item => item.title!}
+                    showSelectAll={false}
+                    onChange={onChange}
+                    selectAllLabels={[
+                        <span>{targetKeys.length}/{saveTransferData.length}</span>,
+                        <span>{alreadyTableData.length}</span>,
+                    ]}
+                    titles={[
+                        <span className="transfer-title">
+                            可选字段 <span className="transfer-count">{saveTransferData.length}</span>
+                        </span>,
+                        <span className="transfer-title">
+                            检索条件 <span className="transfer-count">{alreadyTableData.length}</span>
+                        </span>,
+                    ]}
+                    oneWay
+                >
+                    {
+                        ({ direction, selectedKeys, onItemSelectAll }) => {
+                            if (direction === 'left') {
+                                const checkedKeys = [...selectedKeys, ...targetKeys]
+
+                                return (
+                                    <div className="field-picker">
+                                        <div className="field-picker-toolbar">
+                                            <Select
+                                                className="field-picker-category"
+                                                allowClear
+                                                showSearch
+                                                placeholder="分类"
+                                                value={classifyId || undefined}
+                                                options={pageClassifyData}
+                                                onChange={handleClassifyChange}
+                                            />
+                                            <Radio.Group
+                                                value={searchType}
+                                                optionType="button"
+                                                buttonStyle="solid"
+                                                onChange={(event) => handleSearchTypeChange(event.target.value)}
+                                            >
+                                                <Radio.Button value={2}>关键词</Radio.Button>
+                                                <Radio.Button value={1}>数据集</Radio.Button>
+                                            </Radio.Group>
+                                        </div>
+                                        <Search
+                                            allowClear
+                                            value={searchName}
+                                            className="field-picker-search"
+                                            placeholder="搜索字段"
+                                            onSearch={handleSearch}
+                                            onChange={searchValChange}
+                                        />
+                                        <div className="field-picker-tree">
+                                            <Tree
+                                                checkable
+                                                blockNode
+                                                defaultExpandAll
+                                                checkedKeys={checkedKeys}
+                                                treeData={generateTree(treeData, targetKeys)}
+                                                onCheck={(_, { node: { checked } }) => {
+                                                    const isCheck = !checked
+                                                    const keys = _ as string[]
+
+                                                    const diffKeys = isCheck
+                                                        ? difference(keys, selectedKeys)
+                                                        : difference(selectedKeys, keys)
+
+                                                    onItemSelectAll(diffKeys as string[], isCheck)
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )
+                            }
+                            if (direction === 'right' && alreadyTableData.length > 0) {
+                                return (
+                                    <TemplateETable
+                                        ref={childRef}
+                                        eTableData={alreadyTableData}
+                                        editableKeys={editableRowKeys}
+                                        handleChange={handleChange}
+                                        scrollY={280}
                                     />
-                                </>
-                            )
-                        }
-                        if (direction === 'right' && alreadyTableData.length > 0) {
-                            return (
-                                <TemplateETable
-                                    ref={childRef}
-                                    eTableData={alreadyTableData}
-                                    editableKeys={editableRowKeys}
-                                    handleChange={handleChange}
-                                />
-                            )
+                                )
+                            }
                         }
                     }
-                }
-            </Transfer>
+                </Transfer>
 
-            <div className='etable-preview-footer break-word'>
-                {
-                    <span>
-                        检索条件结果预览：{previewData}
-                    </span>
-                }
-            </div>
+                {previewData && (
+                    <div className="etable-preview-footer break-word">
+                        <span className="etable-preview-label">条件预览</span>
+                        <span>{previewData}</span>
+                    </div>
+                )}
 
-            <div className="search-template-footer">
-                <Space size="large">
-                    <Button type="primary" onClick={() => actionClick(2)} loading={saveLoading}>
-                        保存
-                    </Button>
-                    <Button onClick={() => actionClick(3)} loading={saveOnLoading}>
-                        取消
-                    </Button>
-                </Space>
+                <div className="search-template-footer">
+                    <Space size="middle">
+                        <Button onClick={() => actionClick(3)} loading={saveOnLoading}>
+                            取消
+                        </Button>
+                        <Button type="primary" onClick={() => actionClick(2)} loading={saveLoading}>
+                            保存
+                        </Button>
+                    </Space>
+                </div>
             </div>
         </Spin>
     )

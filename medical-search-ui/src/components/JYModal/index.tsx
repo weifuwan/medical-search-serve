@@ -13,6 +13,7 @@ interface JYModalProps {
     ChildNode: React.FC;// 插槽 dom
     footer?: any[] | null;// 插槽 dom
     centered?: boolean; //居中
+    className?: string; // 自定义类名
     okText?: string;// 确认按钮文字
     okType?: LegacyButtonType;// 确认按钮类型 /primary
     handleOk?: () => void;// 确认回调
@@ -31,6 +32,7 @@ const JYModal: React.FC<JYModalProps> = (props) => {
         okText,
         okType,
         centered,
+        className,
         ChildNode,
         footer,
         handleOk,
@@ -47,6 +49,7 @@ const JYModal: React.FC<JYModalProps> = (props) => {
     return (
         <Modal
             destroyOnClose
+            className={className}
             title={title}
             width={width}
             open={isModalOpen}

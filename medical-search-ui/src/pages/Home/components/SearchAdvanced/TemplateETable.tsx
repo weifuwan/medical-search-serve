@@ -34,6 +34,7 @@ interface tableProps {
   eTableData: DataSourceType[];
   editableKeys: React.Key[];
   handleChange: (data: DataSourceType[]) => void;
+  scrollY?: number;
 }
 
 const isValidDateString = (stringVal: string) => {
@@ -76,7 +77,7 @@ const FieldValue: React.FC<{
 };
 
 const TemplateETable: React.FC<tableProps> = forwardRef((props, ref) => {
-  const { eTableData, editableKeys, handleChange } = props;
+  const { eTableData, editableKeys, handleChange, scrollY = 420 } = props;
   const [selectList, setSelectList] = useState<React.Key[]>([]);
   const formRef = useRef<ProFormInstance<any>>();
   const actionRef = useRef<ActionType>();
@@ -263,7 +264,7 @@ const TemplateETable: React.FC<tableProps> = forwardRef((props, ref) => {
         name="table"
         actionRef={actionRef}
         editableFormRef={editorFormRef}
-        scroll={{ y: 420 }}
+        scroll={{ y: scrollY }}
         maxLength={5}
         loading={false}
         columns={columns}

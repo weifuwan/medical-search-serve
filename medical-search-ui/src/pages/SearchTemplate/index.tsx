@@ -226,6 +226,8 @@ const SearchTemplate: React.FC = () => {
             <JYModal
                 title={isUpdate ? '修改' : '新增'}
                 width="1300px"
+                className="search-template-modal"
+                centered
                 isModalOpen={isModalOpen}
                 ChildNode={() => <IU isUpdate={isUpdate} handleFinish={handleOk} templateId={templateId} />}
                 handleCancel={handleCancel}
