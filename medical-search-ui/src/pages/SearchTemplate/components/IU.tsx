@@ -414,7 +414,8 @@ const IU: React.FC<IUProps> = (props) => {
                         }))}
                 />
 
-                <Transfer
+                <div className="search-template-workspace">
+                    <Transfer
                     className="search-template-transfer"
                     dataSource={transferData}
                     targetKeys={targetKeys}
@@ -505,7 +506,8 @@ const IU: React.FC<IUProps> = (props) => {
                             }
                         }
                     }
-                </Transfer>
+                    </Transfer>
+                </div>
 
                 {previewData && (
                     <div className="etable-preview-footer break-word">
