@@ -1,5 +1,5 @@
 import { useLocation, useModel, useSelector } from '@umijs/max';
-import { Button, Card, Col, message, Pagination, Radio, Row, Table, Tag, Tooltip, Typography } from 'antd';
+import { Button, Card, Col, message, Pagination, Radio, Row, Table, Tag, Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import type { IndexModelState } from '@/models/searchModel';
@@ -84,6 +84,13 @@ const SearchList: React.FC = () => {
 
   const [searchResults, setSearchResults] = useState([]);
   const [baseColumn, setBaseColunmns] = useState([]);
+
+  const cardIdentityFields = new Set(['patient_name', 'patient_id', 'visit_no']);
+
+  const getCardColumns = () =>
+    (baseColumn as any[]).filter(
+      (col) => col.dataIndex && col.dataIndex !== 'action' && !cardIdentityFields.has(col.dataIndex),
+    );
 
   const [saveParams, setSaveParams] = useState<HOMEAPI.SaveDataParams>({
     // 保存当前检索参数
@@ -482,25 +489,53 @@ const SearchList: React.FC = () => {
       <div>
         {viewMode === 'CARD' ? (
           <>
-            <Row gutter={[16, 16]}>
-              {(searchResults as any[]).map((row, index) => (
-                <Col key={row.key ?? index} xs={24} md={12} lg={8}>
-                  <Card
-                    size="small"
-                    title={row.patient_name || row.visit_no || '就诊记录'}
-                    extra={<a onClick={() => actionClick(1, row)}>查看</a>}
-                  >
-                    {(baseColumn as any[])
-                      .filter((col) => col.dataIndex && col.dataIndex !== 'action')
-                      .map((col) => (
-                        <div key={col.dataIndex} style={{ marginBottom: 8, wordBreak: 'break-all' }}>
-                          <Typography.Text type="secondary">{col.title}：</Typography.Text>
-                          <span>{String(row[col.dataIndex] ?? '—')}</span>
+            <Row gutter={[12, 12]}>
+              {(searchResults as any[]).map((row, index) => {
+                const identity = [row.patient_id, row.visit_no].filter(Boolean);
+                const cardColumns = getCardColumns();
+
+                return (
+                  <Col key={row.key ?? index} xs={24} md={12} lg={8}>
+                    <Card
+                      size="small"
+                      className="search-result-card"
+                      title={
+                        <div className="search-result-card-title">
+                          {row.patient_name || row.visit_no || '就诊记录'}
                         </div>
-                      ))}
-                  </Card>
-                </Col>
-              ))}
+                      }
+                      extra={<a onClick={() => actionClick(1, row)}>查看</a>}
+                    >
+                      {identity.length > 0 && (
+                        <div className="search-result-card-identity">
+                          {identity.map((value, identityIndex) => (
+                            <React.Fragment key={value}>
+                              {identityIndex > 0 && <span className="search-result-card-dot">·</span>}
+                              <span>{value}</span>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="search-result-card-grid">
+                        {cardColumns.map((col) => {
+                          const value = row[col.dataIndex];
+                          return (
+                            <div className="search-result-card-field" key={col.dataIndex}>
+                              <span className="search-result-card-label">{col.title}</span>
+                              <Tooltip title={value == null || value === '' ? '—' : String(value)}>
+                                <span className="search-result-card-value">
+                                  {value == null || value === '' ? '—' : String(value)}
+                                </span>
+                              </Tooltip>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
+                  </Col>
+                );
+              })}
             </Row>
             <Pagination
               style={{ marginTop: 18, textAlign: 'right' }}
