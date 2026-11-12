@@ -41,7 +41,7 @@ export const readSearchConfig = (raw?: string): TemplateSearchConfig => {
   if (!raw) return { ...defaultSearchConfig, columns: [] };
   try {
     const data: Partial<TemplateSearchConfig> = JSON.parse(raw);
-    const sorts = Array.isArray(data.sorts)
+    const sorts = Array.isArray(data.sorts) && data.sorts.length > 0
       ? data.sorts
       : data.sort
         ? [data.sort]
