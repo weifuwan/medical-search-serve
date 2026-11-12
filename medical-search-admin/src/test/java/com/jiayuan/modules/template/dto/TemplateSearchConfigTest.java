@@ -36,9 +36,9 @@ public class TemplateSearchConfigTest {
 
     @Test
     public void parsesMultipleSortsInPriorityOrder() {
-        String json = "{\\"sorts\\":["
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"patient_name\\",\\"mode\\":\\"desc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"age\\",\\"mode\\":\\"asc\\"}]}";
+        String json = "{\"sorts\":["
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"patient_name\",\"mode\":\"desc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"age\",\"mode\":\"asc\"}]}";
 
         TemplateSearchConfig config = TemplateSearchConfig.parse(json);
 
@@ -51,20 +51,20 @@ public class TemplateSearchConfigTest {
 
     @Test
     public void rejectsDuplicateSortFields() {
-        expectInvalid("{\\"sorts\\":["
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"age\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"age\\",\\"mode\\":\\"desc\\"}]}");
+        expectInvalid("{\"sorts\":["
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"age\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"age\",\"mode\":\"desc\"}]}");
     }
 
     @Test
     public void rejectsMoreThanFiveSortFields() {
-        expectInvalid("{\\"sorts\\":["
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_1\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_2\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_3\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_4\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_5\\",\\"mode\\":\\"asc\\"},"
-                + "{\\"tableCode\\":\\"ms_visit_record\\",\\"fieldCode\\":\\"field_6\\",\\"mode\\":\\"asc\\"}]}");
+        expectInvalid("{\"sorts\":["
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_1\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_2\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_3\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_4\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_5\",\"mode\":\"asc\"},"
+                + "{\"tableCode\":\"ms_visit_record\",\"fieldCode\":\"field_6\",\"mode\":\"asc\"}]}");
     }
 
     @Test
