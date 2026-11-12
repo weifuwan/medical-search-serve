@@ -16,6 +16,7 @@ const Home: React.FC = () => {
     const [favoritesReady, setFavoritesReady] = useState(false)
     const [pendingFavorites, setPendingFavorites] = useState<string[]>([])
     const favoriteRequests = useRef<Set<string>>(new Set())
+    const mountedRef = useRef(true)
     let historyLoading = false
     let hotLoading = false
 
@@ -23,6 +24,7 @@ const Home: React.FC = () => {
     const handleHistoryList = async (top: number) => {
         historyLoading = true
         const { code, data } = await getHistoryList({ top })
+        if (!mountedRef.current) return
         if (code === 0) {
             setHistoryList(data)
             historyLoading = false
@@ -32,6 +34,7 @@ const Home: React.FC = () => {
     const handleHotList = async (top: number) => {
         hotLoading = true
         const { code, data } = await getHotList({ top })
+        if (!mountedRef.current) return
         if (code === 0) {
             setHotList(data)
             hotLoading = false
@@ -41,7 +44,7 @@ const Home: React.FC = () => {
     const handleSearchVal = () => { }
 
     const toggleFavorite = async (expression: string) => {
-        if (!favoritesReady || favoriteRequests.current.has(expression)) return
+        if (!mountedRef.current || !favoritesReady || favoriteRequests.current.has(expression)) return
 
         favoriteRequests.current.add(expression)
         setPendingFavorites(Array.from(favoriteRequests.current))
@@ -51,6 +54,7 @@ const Home: React.FC = () => {
             if (existing) {
                 const response = await deleteFavorite(existing.id)
                 if (response.code !== 0) throw new Error(response.msg || '取消收藏失败')
+                if (!mountedRef.current) return
                 setFavorites(items => items.filter(item => item.id !== existing.id))
                 message.success('已取消收藏')
             } else {
@@ -59,6 +63,7 @@ const Home: React.FC = () => {
                 if (response.code !== 0 || !response.data?.id) {
                     throw new Error(response.msg || '收藏失败')
                 }
+                if (!mountedRef.current) return
                 setFavorites(items => [...items, {
                     id: response.data.id,
                     title,
@@ -68,10 +73,14 @@ const Home: React.FC = () => {
                 message.success('已收藏')
             }
         } catch (error: any) {
-            message.error(error?.message || '收藏操作失败')
+            if (mountedRef.current) {
+                message.error(error?.message || '收藏操作失败')
+            }
         } finally {
             favoriteRequests.current.delete(expression)
-            setPendingFavorites(Array.from(favoriteRequests.current))
+            if (mountedRef.current) {
+                setPendingFavorites(Array.from(favoriteRequests.current))
+            }
         }
     }
 
@@ -79,10 +88,15 @@ const Home: React.FC = () => {
         let active = true
         const loadFavorites = async () => {
             try {
-                const response = await getFavorites()
+                const response = await getFavorites({
+                    pageNum: 1,
+                    pageSize: 100,
+                    sortField: 'createdAt',
+                    sortOrder: 'DESC',
+                })
                 if (response.code !== 0) throw new Error(response.msg || '加载收藏失败')
                 if (active) {
-                    setFavorites(response.data || [])
+                    setFavorites(Array.isArray(response.data?.records) ? response.data.records : [])
                     setFavoritesReady(true)
                 }
             } catch {
@@ -91,6 +105,13 @@ const Home: React.FC = () => {
         }
         loadFavorites()
         return () => { active = false }
+    }, [])
+
+    useEffect(() => {
+        mountedRef.current = true
+        return () => {
+            mountedRef.current = false
+        }
     }, [])
 
     useEffect(() => {
