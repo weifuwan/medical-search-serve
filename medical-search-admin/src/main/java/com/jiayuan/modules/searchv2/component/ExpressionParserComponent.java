@@ -7,6 +7,7 @@ import com.jiayuan.common.component.DesensitizedComponent;
 import com.jiayuan.common.constant.Symbol;
 import com.jiayuan.common.exception.BizException;
 import com.jiayuan.modules.search.request.SearchRequest;
+import com.jiayuan.modules.search.request.SearchSortDTO;
 import com.jiayuan.modules.searchv2.cache.IndexStructureCache;
 import com.jiayuan.modules.searchv2.cache.MysqlMetaCache;
 import com.jiayuan.modules.searchv2.modal.NodeQueryVo;
@@ -195,15 +196,15 @@ public class ExpressionParserComponent {
             long startTime = System.currentTimeMillis();
             log.debug("Initiating search for expression: {}", request.getExpression());
 
-            SearchVo results = getOptimizedJoinedResultsCustom(
+            List<SearchSortDTO> sorts = resolveSorts(request);
+            SearchVo results = getOptimizedJoinedResultsWithSorts(
                     request.getExpression(),
                     request.getPage(),
                     request.getSize(),
                     request.getColumnList(),
                     request.getEsBatchSize(),
                     request.isExport(),
-                    request.getOrderFieldCode(),
-                    request.getOrderMode(),
+                    sorts,
                     request.getScopeExpression(),
                     request.getDimension()
             );
@@ -220,6 +221,42 @@ public class ExpressionParserComponent {
             log.error(message, e);
             throw new BizException(message, e);
         }
+    }
+
+    private List<SearchSortDTO> resolveSorts(SearchRequest request) {
+        List<SearchSortDTO> sorts = request.getSorts();
+        if (sorts != null && !sorts.isEmpty()) {
+            if (sorts.size() > 5) {
+                throw new BizException("排序字段最多支持5个");
+            }
+
+            Set<String> fields = new HashSet<>();
+            for (SearchSortDTO sort : sorts) {
+                if (sort == null || StringUtils.isBlank(sort.getFieldCode())
+                        || (!"asc".equalsIgnoreCase(sort.getMode())
+                        && !"desc".equalsIgnoreCase(sort.getMode()))) {
+                    throw new BizException("排序配置不合法");
+                }
+                if (StringUtils.isNotBlank(sort.getTableCode())
+                        && !VISIT_RECORD_INDEX.equalsIgnoreCase(sort.getTableCode())) {
+                    throw new BizException("排序仅支持就诊主表中的字段");
+                }
+                if (!fields.add(sort.getFieldCode())) {
+                    throw new BizException("排序字段不能重复");
+                }
+            }
+            return sorts;
+        }
+
+        // 兼容旧请求中的单字段排序参数。
+        if (StringUtils.isNotBlank(request.getOrderFieldCode())) {
+            SearchSortDTO sort = new SearchSortDTO();
+            sort.setTableCode(request.getOrderTableCode());
+            sort.setFieldCode(request.getOrderFieldCode());
+            sort.setMode(StringUtils.isBlank(request.getOrderMode()) ? "asc" : request.getOrderMode());
+            return Collections.singletonList(sort);
+        }
+        return Collections.emptyList();
     }
 
     /**
@@ -266,6 +303,28 @@ public class ExpressionParserComponent {
                                                     String orderMode,
                                                     String scopeExpression,
                                                     Integer dimension) throws Exception {
+        List<SearchSortDTO> sorts = new ArrayList<>();
+        if (StringUtils.isNotBlank(orderFieldCode)) {
+            SearchSortDTO sort = new SearchSortDTO();
+            sort.setTableCode(VISIT_RECORD_INDEX);
+            sort.setFieldCode(orderFieldCode);
+            sort.setMode(StringUtils.isBlank(orderMode) ? "asc" : orderMode);
+            sorts.add(sort);
+        }
+        return getOptimizedJoinedResultsWithSorts(
+                condition, pageNum, pageSize, selectColumns, esBatchSize,
+                isExport, sorts, scopeExpression, dimension);
+    }
+
+    private SearchVo getOptimizedJoinedResultsWithSorts(String condition,
+                                                        int pageNum,
+                                                        int pageSize,
+                                                        List<FieldDTO> selectColumns,
+                                                        int esBatchSize,
+                                                        boolean isExport,
+                                                        List<SearchSortDTO> sorts,
+                                                        String scopeExpression,
+                                                        Integer dimension) throws Exception {
         if (StringUtils.isBlank(condition)) {
             throw new IllegalArgumentException("Search condition cannot be null or empty");
         }
@@ -289,8 +348,7 @@ public class ExpressionParserComponent {
             logCacheStatistics();
 
             return getOptimizedJoinedResults(
-                    prepareResults(cachedResults, conditionHash, orderFieldCode, orderMode,
-                            scopeExpression, dimension),
+                    prepareResults(cachedResults, conditionHash, sorts, scopeExpression, dimension),
                     pageNum,
                     pageSize,
                     selectColumns,
@@ -306,8 +364,7 @@ public class ExpressionParserComponent {
         log.info("Cached new results for condition hash: {}", conditionHash);
 
         return getOptimizedJoinedResults(
-                prepareResults(joinedResults, conditionHash, orderFieldCode, orderMode,
-                        scopeExpression, dimension),
+                prepareResults(joinedResults, conditionHash, sorts, scopeExpression, dimension),
                 pageNum,
                 pageSize,
                 selectColumns,
@@ -316,13 +373,13 @@ public class ExpressionParserComponent {
     }
 
     private NodeQueryVo prepareResults(NodeQueryVo base, String conditionHash,
-                                       String orderFieldCode, String orderMode,
+                                       List<SearchSortDTO> sorts,
                                        String scopeExpression, Integer dimension) throws Exception {
         NodeQueryVo filtered = applyScope(base, scopeExpression);
         String scopeKey = scopeExpression == null ? "" : scopeExpression.trim();
         String key = conditionHash + ":" + generateConditionHash(scopeKey);
-        NodeQueryVo ordered = applyOrder(filtered, key, orderFieldCode, orderMode);
-        return applyPatientDimension(ordered, key, orderFieldCode, orderMode, dimension);
+        NodeQueryVo ordered = applyOrder(filtered, key, sorts);
+        return applyPatientDimension(ordered, key, sorts, dimension);
     }
 
     private NodeQueryVo applyScope(NodeQueryVo base, String scopeExpression) throws Exception {
@@ -349,13 +406,13 @@ public class ExpressionParserComponent {
     }
 
     private NodeQueryVo applyPatientDimension(NodeQueryVo base, String conditionHash,
-                                              String fieldCode, String mode,
+                                              List<SearchSortDTO> sorts,
                                               Integer dimension) throws IOException {
         if (!Integer.valueOf(1).equals(dimension) || base.getResult().isEmpty()) {
             return base;
         }
 
-        String cacheKey = conditionHash + ":patient:" + fieldCode + ":" + mode;
+        String cacheKey = conditionHash + ":patient:" + buildSortCacheKey(sorts);
         List<String> selected = orderCache.getIfPresent(cacheKey);
         if (selected == null) {
             selected = distinctPatientVisits(base.getResult());
@@ -405,16 +462,15 @@ public class ExpressionParserComponent {
     }
 
     private NodeQueryVo applyOrder(NodeQueryVo results, String conditionHash,
-                                   String fieldCode, String mode) throws IOException {
-        if (StringUtils.isBlank(fieldCode) || results.getResult().isEmpty()) {
+                                   List<SearchSortDTO> sorts) throws IOException {
+        if (sorts == null || sorts.isEmpty() || results.getResult().isEmpty()) {
             return results;
         }
 
-        String sortMode = "desc".equalsIgnoreCase(mode) ? "desc" : "asc";
-        String cacheKey = conditionHash + ":" + fieldCode + ":" + sortMode;
+        String cacheKey = conditionHash + ":" + buildSortCacheKey(sorts);
         List<String> ordered = orderCache.getIfPresent(cacheKey);
         if (ordered == null) {
-            ordered = sortVisitNumbers(results.getResult(), fieldCode, sortMode);
+            ordered = sortVisitNumbers(results.getResult(), sorts);
             orderCache.put(cacheKey, ordered);
         }
 
@@ -424,23 +480,62 @@ public class ExpressionParserComponent {
         return sorted;
     }
 
-    private List<String> sortVisitNumbers(List<String> visitNumbers,
-                                          String fieldCode, String mode) throws IOException {
-        Map<String, String> fieldTypes = indexStructureCache.getFieldTypes(VISIT_RECORD_INDEX);
-        if (!fieldTypes.containsKey(fieldCode)) {
-            throw new BizException("排序字段不存在: " + fieldCode);
+    private String buildSortCacheKey(List<SearchSortDTO> sorts) {
+        if (sorts == null || sorts.isEmpty()) {
+            return "default";
         }
 
-        String sortField = AGE_FIELD.equals(fieldCode) ? AGE_SECONDS_FIELD
-                : "text".equals(fieldTypes.get(fieldCode)) ? fieldCode + ".keyword" : fieldCode;
+        StringBuilder key = new StringBuilder();
+        for (SearchSortDTO sort : sorts) {
+            if (key.length() > 0) {
+                key.append(",");
+            }
+            String mode = sort == null || !"desc".equalsIgnoreCase(sort.getMode()) ? "asc" : "desc";
+            key.append(sort == null ? "" : sort.getFieldCode()).append(":").append(mode);
+        }
+        return key.toString();
+    }
 
+    private List<String> sortVisitNumbers(List<String> visitNumbers,
+                                          List<SearchSortDTO> sorts) throws IOException {
+        Map<String, String> fieldTypes = indexStructureCache.getFieldTypes(VISIT_RECORD_INDEX);
         SearchSourceBuilder source = new SearchSourceBuilder()
                 .query(QueryBuilders.termsQuery("visit_no.keyword", visitNumbers))
                 .fetchSource(false)
-                .docValueField("visit_no.keyword")
-                .sort(sortField, "desc".equals(mode) ? SortOrder.DESC : SortOrder.ASC)
-                .sort("visit_no.keyword", SortOrder.ASC)
-                .size(1000);
+                .docValueField("visit_no.keyword");
+
+        Set<String> sortedFields = new HashSet<>();
+        for (SearchSortDTO sort : sorts) {
+            if (sort == null || StringUtils.isBlank(sort.getFieldCode())) {
+                throw new BizException("排序配置不合法");
+            }
+            if (StringUtils.isNotBlank(sort.getTableCode())
+                    && !VISIT_RECORD_INDEX.equalsIgnoreCase(sort.getTableCode())) {
+                throw new BizException("排序仅支持就诊主表中的字段");
+            }
+
+            String fieldCode = sort.getFieldCode();
+            if (!sortedFields.add(fieldCode)) {
+                throw new BizException("排序字段不能重复");
+            }
+
+            String fieldType = fieldTypes.get(fieldCode);
+            if (fieldType == null) {
+                throw new BizException("排序字段不存在: " + fieldCode);
+            }
+
+            String sortField = AGE_FIELD.equals(fieldCode) ? AGE_SECONDS_FIELD
+                    : "text".equals(fieldType) ? fieldCode + ".keyword" : fieldCode;
+            SortOrder sortOrder = "desc".equalsIgnoreCase(sort.getMode())
+                    ? SortOrder.DESC : SortOrder.ASC;
+            source.sort(sortField, sortOrder);
+        }
+
+        // 以就诊号作为稳定的最终排序条件，保证分页时顺序一致。
+        if (!sortedFields.contains("visit_no")) {
+            source.sort("visit_no.keyword", SortOrder.ASC);
+        }
+        source.size(1000);
 
         Set<String> orderedSet = new LinkedHashSet<>();
         while (true) {
