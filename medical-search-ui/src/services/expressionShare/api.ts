@@ -53,6 +53,25 @@ export interface ShareLog {
   createdAt: string;
 }
 
+export interface SharePageQuery {
+  pageNum: number;
+  pageSize: number;
+  keyword?: string;
+  sortField: string;
+  sortOrder: 'ASC' | 'DESC';
+  status?: string;
+  scope?: string;
+  permission?: string;
+  source?: string;
+}
+
+export interface SharePageResult<T> {
+  records: T[];
+  total: number;
+  pageNum: number;
+  pageSize: number;
+}
+
 interface ApiResult<T> {
   code: number;
   msg?: string;
@@ -76,11 +95,11 @@ export const updateShare = (code: string, data: ShareInput) =>
 export const revokeShare = (code: string) =>
   request<ApiResult<void>>(sharePath(code) + '/revoke', { method: 'POST' });
 
-export const getMyShares = () =>
-  request<ApiResult<ShareItem[]>>(baseUrl + '/mine');
+export const getMyShares = (params: SharePageQuery) =>
+  request<ApiResult<SharePageResult<ShareItem>>>(baseUrl + '/mine', { params });
 
-export const getReceivedShares = () =>
-  request<ApiResult<ShareItem[]>>(baseUrl + '/received');
+export const getReceivedShares = (params: SharePageQuery) =>
+  request<ApiResult<SharePageResult<ShareItem>>>(baseUrl + '/received', { params });
 
 export const getShareUsers = (keyword: string) =>
   request<ApiResult<ShareUser[]>>(baseUrl + '/users', { params: { keyword } });
@@ -97,8 +116,8 @@ export const addFavorite = (title: string, expression: string) =>
 export const copyShareToFavorite = (code: string) =>
   request<ApiResult<{ id: string }>>(sharePath(code) + '/copy', { method: 'POST' });
 
-export const getFavorites = () =>
-  request<ApiResult<FavoriteItem[]>>(baseUrl + '/favorites');
+export const getFavorites = (params: SharePageQuery) =>
+  request<ApiResult<SharePageResult<FavoriteItem>>>(baseUrl + '/favorites', { params });
 
 export const deleteFavorite = (id: string) =>
   request<ApiResult<void>>(baseUrl + '/favorites/' + encodeURIComponent(id), { method: 'DELETE' });

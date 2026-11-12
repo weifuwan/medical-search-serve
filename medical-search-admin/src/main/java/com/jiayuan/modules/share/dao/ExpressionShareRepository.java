@@ -1,12 +1,15 @@
 package com.jiayuan.modules.share.dao;
 
 import com.jiayuan.modules.share.entity.ExpressionShareRecord;
+import com.jiayuan.modules.share.dto.ExpressionSharePageQuery;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Repository
@@ -101,22 +104,149 @@ public class ExpressionShareRepository {
                 }, shareId);
     }
 
-    public List<ExpressionShareRecord> mine(Long userId) {
-        return jdbc.query("SELECT * FROM (SELECT * FROM cbdses_expression_share " +
-                        "WHERE owner_id = ? ORDER BY updated_at DESC) WHERE ROWNUM <= 100",
-                mapper, userId);
+    public long countMine(Long userId, ExpressionSharePageQuery query) {
+        SqlFilter filter = mineFilter(userId, query);
+        return count("SELECT COUNT(*) FROM cbdses_expression_share s" + filter.where, filter.params);
     }
 
-    public List<ExpressionShareRecord> received(Long userId, String groupCode, String organizationCode) {
-        return jdbc.query("SELECT * FROM (SELECT s.* FROM cbdses_expression_share s " +
-                        "WHERE s.owner_id <> ? AND s.status = 'ACTIVE' " +
-                        "AND s.expires_at > CURRENT_TIMESTAMP " +
-                        "AND s.group_code = ? AND s.organization_code = ? " +
-                        "AND (s.scope = 'HOSPITAL' OR (s.scope = 'USERS' AND EXISTS " +
-                        "(SELECT 1 FROM cbdses_expression_share_member m " +
-                        "WHERE m.share_id = s.id AND m.user_id = ?))) ORDER BY s.updated_at DESC) " +
-                        "WHERE ROWNUM <= 100",
-                mapper, userId, groupCode, organizationCode, userId);
+    public List<ExpressionShareRecord> pageMine(Long userId, ExpressionSharePageQuery query,
+                                                 long offset, int pageSize) {
+        SqlFilter filter = mineFilter(userId, query);
+        String baseSql = "SELECT s.* FROM cbdses_expression_share s" + filter.where;
+        return pageQuery(baseSql, shareOrderBy(query, "updatedAt"), mapper,
+                filter.params, offset, pageSize);
+    }
+
+    public long countReceived(Long userId, String groupCode, String organizationCode,
+                              ExpressionSharePageQuery query) {
+        SqlFilter filter = receivedFilter(userId, groupCode, organizationCode, query);
+        return count("SELECT COUNT(*) FROM cbdses_expression_share s" + filter.where, filter.params);
+    }
+
+    public List<ExpressionShareRecord> pageReceived(Long userId, String groupCode, String organizationCode,
+                                                     ExpressionSharePageQuery query,
+                                                     long offset, int pageSize) {
+        SqlFilter filter = receivedFilter(userId, groupCode, organizationCode, query);
+        String baseSql = "SELECT s.* FROM cbdses_expression_share s" + filter.where;
+        return pageQuery(baseSql, shareOrderBy(query, "updatedAt"), mapper,
+                filter.params, offset, pageSize);
+    }
+
+    private SqlFilter mineFilter(Long userId, ExpressionSharePageQuery query) {
+        SqlFilter filter = new SqlFilter();
+        filter.where.append(" WHERE s.owner_id = ?");
+        filter.params.add(userId);
+        appendKeyword(filter, "s", query.getKeyword());
+
+        if ("ACTIVE".equals(query.getStatus())) {
+            filter.where.append(" AND s.status = 'ACTIVE' AND s.expires_at > CURRENT_TIMESTAMP");
+        } else if ("EXPIRED".equals(query.getStatus())) {
+            filter.where.append(" AND s.status = 'ACTIVE' AND s.expires_at <= CURRENT_TIMESTAMP");
+        } else if ("REVOKED".equals(query.getStatus())) {
+            filter.where.append(" AND s.status = 'REVOKED'");
+        }
+
+        appendEqualFilter(filter, "s.scope", query.getScope());
+        appendEqualFilter(filter, "s.permission", query.getPermission());
+        return filter;
+    }
+
+    private SqlFilter receivedFilter(Long userId, String groupCode, String organizationCode,
+                                     ExpressionSharePageQuery query) {
+        SqlFilter filter = new SqlFilter();
+        filter.where.append(" WHERE s.owner_id <> ? AND s.status = 'ACTIVE' ");
+        filter.where.append("AND s.expires_at > CURRENT_TIMESTAMP ");
+        filter.where.append("AND s.group_code = ? AND s.organization_code = ? ");
+        filter.where.append("AND (s.scope = 'HOSPITAL' OR (s.scope = 'USERS' AND EXISTS ");
+        filter.where.append("(SELECT 1 FROM cbdses_expression_share_member m ");
+        filter.where.append("WHERE m.share_id = s.id AND m.user_id = ?)))");
+        filter.params.add(userId);
+        filter.params.add(groupCode);
+        filter.params.add(organizationCode);
+        filter.params.add(userId);
+
+        appendKeyword(filter, "s", query.getKeyword());
+        appendEqualFilter(filter, "s.scope", query.getScope());
+        appendEqualFilter(filter, "s.permission", query.getPermission());
+        return filter;
+    }
+
+    private SqlFilter favoritesFilter(Long userId, ExpressionSharePageQuery query) {
+        SqlFilter filter = new SqlFilter();
+        filter.where.append(" WHERE f.user_id = ?");
+        filter.params.add(userId);
+        appendKeyword(filter, "f", query.getKeyword());
+
+        if ("SELF".equals(query.getSource())) {
+            filter.where.append(" AND f.origin_share_id IS NULL");
+        } else if ("SHARED".equals(query.getSource())) {
+            filter.where.append(" AND f.origin_share_id IS NOT NULL");
+        }
+        return filter;
+    }
+
+    private void appendKeyword(SqlFilter filter, String alias, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return;
+        }
+        String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+        filter.where.append(" AND (LOWER(").append(alias).append(".title) LIKE ? ");
+        filter.where.append("OR LOWER(").append(alias).append(".expression) LIKE ?)");
+        filter.params.add(pattern);
+        filter.params.add(pattern);
+    }
+
+    private void appendEqualFilter(SqlFilter filter, String column, String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return;
+        }
+        filter.where.append(" AND ").append(column).append(" = ?");
+        filter.params.add(value);
+    }
+
+    private long count(String sql, List<Object> params) {
+        Long total = jdbc.queryForObject(sql, Long.class, params.toArray());
+        return total == null ? 0L : total;
+    }
+
+    private <T> List<T> pageQuery(String baseSql, String orderBy, RowMapper<T> rowMapper,
+                                  List<Object> params, long offset, int pageSize) {
+        String sql = "SELECT * FROM (SELECT page_source.*, ROW_NUMBER() OVER (ORDER BY " +
+                orderBy + ") AS rn FROM (" + baseSql + ") page_source) " +
+                "WHERE rn > ? AND rn <= ? ORDER BY rn";
+        List<Object> pageParams = new ArrayList<>(params);
+        pageParams.add(offset);
+        pageParams.add(offset + pageSize);
+        return jdbc.query(sql, rowMapper, pageParams.toArray());
+    }
+
+    private String shareOrderBy(ExpressionSharePageQuery query, String defaultField) {
+        String field = query.getSortField() == null || query.getSortField().trim().isEmpty()
+                ? defaultField : query.getSortField();
+        String column;
+        if ("createdAt".equals(field)) {
+            column = "page_source.created_at";
+        } else if ("expiresAt".equals(field)) {
+            column = "page_source.expires_at";
+        } else if ("title".equals(field)) {
+            column = "LOWER(page_source.title)";
+        } else {
+            column = "page_source.updated_at";
+        }
+        String direction = "ASC".equalsIgnoreCase(query.getSortOrder()) ? "ASC" : "DESC";
+        return column + " " + direction + ", page_source.id ASC";
+    }
+
+    private String favoriteOrderBy(ExpressionSharePageQuery query) {
+        String column = "title".equals(query.getSortField())
+                ? "LOWER(page_source.title)" : "page_source.created_at";
+        String direction = "ASC".equalsIgnoreCase(query.getSortOrder()) ? "ASC" : "DESC";
+        return column + " " + direction + ", page_source.id ASC";
+    }
+
+    private static class SqlFilter {
+        private final StringBuilder where = new StringBuilder();
+        private final List<Object> params = new ArrayList<>();
     }
 
     public boolean userInOrganization(Long userId, String groupCode, String organizationCode) {
@@ -172,19 +302,27 @@ public class ExpressionShareRepository {
                 id, userId, title, expression, originShareId);
     }
 
-    public List<Map<String, Object>> favorites(Long userId) {
-        return jdbc.query("SELECT * FROM (SELECT id, title, expression, origin_share_id, created_at " +
-                        "FROM cbdses_expression_favorite WHERE user_id = ? ORDER BY created_at DESC) " +
-                        "WHERE ROWNUM <= 100",
-                (rs, rowNum) -> {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", rs.getString("id"));
-                    item.put("title", rs.getString("title"));
-                    item.put("expression", rs.getString("expression"));
-                    item.put("originShareId", rs.getString("origin_share_id"));
-                    item.put("createdAt", rs.getTimestamp("created_at"));
-                    return item;
-                }, userId);
+    public long countFavorites(Long userId, ExpressionSharePageQuery query) {
+        SqlFilter filter = favoritesFilter(userId, query);
+        return count("SELECT COUNT(*) FROM cbdses_expression_favorite f" + filter.where, filter.params);
+    }
+
+    public List<Map<String, Object>> pageFavorites(Long userId, ExpressionSharePageQuery query,
+                                                    long offset, int pageSize) {
+        SqlFilter filter = favoritesFilter(userId, query);
+        String baseSql = "SELECT f.id, f.title, f.expression, f.origin_share_id, f.created_at " +
+                "FROM cbdses_expression_favorite f" + filter.where;
+        RowMapper<Map<String, Object>> rowMapper = (rs, rowNum) -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", rs.getString("id"));
+            item.put("title", rs.getString("title"));
+            item.put("expression", rs.getString("expression"));
+            item.put("originShareId", rs.getString("origin_share_id"));
+            item.put("createdAt", rs.getTimestamp("created_at"));
+            return item;
+        };
+        return pageQuery(baseSql, favoriteOrderBy(query), rowMapper,
+                filter.params, offset, pageSize);
     }
 
     public boolean deleteFavorite(String id, Long userId) {

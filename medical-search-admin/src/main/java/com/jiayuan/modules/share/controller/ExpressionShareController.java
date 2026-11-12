@@ -2,6 +2,8 @@ package com.jiayuan.modules.share.controller;
 
 import com.jiayuan.common.utils.Result;
 import com.jiayuan.modules.share.dto.ExpressionShareRequest;
+import com.jiayuan.modules.share.dto.ExpressionSharePageQuery;
+import com.jiayuan.modules.share.dto.ExpressionSharePageResult;
 import com.jiayuan.modules.share.service.ExpressionShareService;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,13 +26,15 @@ public class ExpressionShareController {
     }
 
     @GetMapping("/mine")
-    public Result<List<Map<String, Object>>> mine() {
-        return Result.ok(service.mine());
+    public Result<ExpressionSharePageResult<Map<String, Object>>> mine(
+            @ModelAttribute ExpressionSharePageQuery query) {
+        return Result.ok(service.mine(query));
     }
 
     @GetMapping("/received")
-    public Result<List<Map<String, Object>>> received() {
-        return Result.ok(service.received());
+    public Result<ExpressionSharePageResult<Map<String, Object>>> received(
+            @ModelAttribute ExpressionSharePageQuery query) {
+        return Result.ok(service.received(query));
     }
 
     @GetMapping("/users")
@@ -39,8 +43,9 @@ public class ExpressionShareController {
     }
 
     @GetMapping("/favorites")
-    public Result<List<Map<String, Object>>> favorites() {
-        return Result.ok(service.favorites());
+    public Result<ExpressionSharePageResult<Map<String, Object>>> favorites(
+            @ModelAttribute ExpressionSharePageQuery query) {
+        return Result.ok(service.favorites(query));
     }
 
     @PostMapping("/favorites")

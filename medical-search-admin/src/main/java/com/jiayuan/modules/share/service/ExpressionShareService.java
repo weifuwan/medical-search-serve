@@ -5,6 +5,8 @@ import com.jiayuan.modules.security.user.SecurityUser;
 import com.jiayuan.modules.security.user.UserDetail;
 import com.jiayuan.modules.share.dao.ExpressionShareRepository;
 import com.jiayuan.modules.share.dto.ExpressionShareRequest;
+import com.jiayuan.modules.share.dto.ExpressionSharePageQuery;
+import com.jiayuan.modules.share.dto.ExpressionSharePageResult;
 import com.jiayuan.modules.share.entity.ExpressionShareRecord;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -257,23 +260,104 @@ public class ExpressionShareService {
         repository.audit(record.getId(), user.getUserId(), "REVOKE");
     }
 
-    public List<Map<String, Object>> mine() {
-        UserDetail user = actor();
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (ExpressionShareRecord record : repository.mine(user.getUserId())) {
-            result.add(view(record, user, false));
+    private ExpressionSharePageQuery normalizePageQuery(ExpressionSharePageQuery query,
+                                                          String defaultSortField,
+                                                          String... allowedSortFields) {
+        ExpressionSharePageQuery result = query == null ? new ExpressionSharePageQuery() : query;
+
+        if (result.getPageNum() == null || result.getPageNum() < 1) {
+            result.setPageNum(1);
         }
+        if (result.getPageSize() == null || result.getPageSize() < 1) {
+            result.setPageSize(10);
+        } else if (result.getPageSize() > 100) {
+            result.setPageSize(100);
+        }
+
+        String keyword = result.getKeyword() == null ? "" : result.getKeyword().trim();
+        if (keyword.length() > 100) {
+            throw new BizException("搜索关键词不能超过100个字符");
+        }
+        result.setKeyword(keyword);
+
+        String sortField = result.getSortField();
+        if (sortField == null || sortField.trim().isEmpty()) {
+            sortField = defaultSortField;
+        }
+        boolean supported = false;
+        for (String allowed : allowedSortFields) {
+            if (allowed.equals(sortField)) {
+                supported = true;
+                break;
+            }
+        }
+        if (!supported) {
+            throw new BizException("不支持的排序字段：" + sortField);
+        }
+        result.setSortField(sortField);
+
+        String sortOrder = result.getSortOrder();
+        if (sortOrder == null || sortOrder.trim().isEmpty()) {
+            sortOrder = "DESC";
+        }
+        sortOrder = sortOrder.trim().toUpperCase(Locale.ROOT);
+        if (!"ASC".equals(sortOrder) && !"DESC".equals(sortOrder)) {
+            throw new BizException("排序方向只能是ASC或DESC");
+        }
+        result.setSortOrder(sortOrder);
         return result;
     }
 
-    public List<Map<String, Object>> received() {
-        UserDetail user = actor();
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (ExpressionShareRecord record : repository.received(user.getUserId(),
-                user.getGroupCode(), user.getOrganizationCode())) {
-            result.add(view(record, user, false));
+    private String normalizeFilter(String value, String fieldName, String... allowedValues) {
+        if (value == null || value.trim().isEmpty() || "ALL".equalsIgnoreCase(value.trim())) {
+            return null;
         }
-        return result;
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        for (String allowed : allowedValues) {
+            if (allowed.equals(normalized)) {
+                return normalized;
+            }
+        }
+        throw new BizException("不支持的" + fieldName + "筛选条件");
+    }
+
+    public ExpressionSharePageResult<Map<String, Object>> mine(ExpressionSharePageQuery input) {
+        UserDetail user = actor();
+        ExpressionSharePageQuery query = normalizePageQuery(
+                input, "updatedAt", "updatedAt", "createdAt", "expiresAt", "title");
+        query.setStatus(normalizeFilter(query.getStatus(), "状态", "ACTIVE", "EXPIRED", "REVOKED"));
+        query.setScope(normalizeFilter(query.getScope(), "范围", "HOSPITAL", "USERS"));
+        query.setPermission(normalizeFilter(query.getPermission(), "权限", "READ", "EDIT"));
+
+        long offset = (long) (query.getPageNum() - 1) * query.getPageSize();
+        long total = repository.countMine(user.getUserId(), query);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (ExpressionShareRecord record : repository.pageMine(
+                user.getUserId(), query, offset, query.getPageSize())) {
+            records.add(view(record, user, false));
+        }
+        return new ExpressionSharePageResult<>(
+                records, total, query.getPageNum(), query.getPageSize());
+    }
+
+    public ExpressionSharePageResult<Map<String, Object>> received(ExpressionSharePageQuery input) {
+        UserDetail user = actor();
+        ExpressionSharePageQuery query = normalizePageQuery(
+                input, "updatedAt", "updatedAt", "createdAt", "title");
+        query.setScope(normalizeFilter(query.getScope(), "范围", "HOSPITAL", "USERS"));
+        query.setPermission(normalizeFilter(query.getPermission(), "权限", "READ", "EDIT"));
+
+        long offset = (long) (query.getPageNum() - 1) * query.getPageSize();
+        long total = repository.countReceived(user.getUserId(), user.getGroupCode(),
+                user.getOrganizationCode(), query);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (ExpressionShareRecord record : repository.pageReceived(
+                user.getUserId(), user.getGroupCode(), user.getOrganizationCode(),
+                query, offset, query.getPageSize())) {
+            records.add(view(record, user, false));
+        }
+        return new ExpressionSharePageResult<>(
+                records, total, query.getPageNum(), query.getPageSize());
     }
 
     public List<Map<String, Object>> users(String keyword) {
@@ -321,8 +405,18 @@ public class ExpressionShareService {
         return m;
     }
 
-    public List<Map<String, Object>> favorites() {
-        return repository.favorites(actor().getUserId());
+    public ExpressionSharePageResult<Map<String, Object>> favorites(ExpressionSharePageQuery input) {
+        UserDetail user = actor();
+        ExpressionSharePageQuery query = normalizePageQuery(
+                input, "createdAt", "createdAt", "title");
+        query.setSource(normalizeFilter(query.getSource(), "来源", "SELF", "SHARED"));
+
+        long offset = (long) (query.getPageNum() - 1) * query.getPageSize();
+        long total = repository.countFavorites(user.getUserId(), query);
+        List<Map<String, Object>> records = repository.pageFavorites(
+                user.getUserId(), query, offset, query.getPageSize());
+        return new ExpressionSharePageResult<>(
+                records, total, query.getPageNum(), query.getPageSize());
     }
 
     public void deleteFavorite(String id) {
