@@ -346,6 +346,9 @@ public class ExpressionShareService {
                 input, "updatedAt", "updatedAt", "createdAt", "title");
         query.setScope(normalizeFilter(query.getScope(), "范围", "HOSPITAL", "USERS"));
         query.setPermission(normalizeFilter(query.getPermission(), "权限", "READ", "EDIT"));
+        if (query.getSharerId() != null && query.getSharerId() <= 0) {
+            throw new BizException("分享人参数不正确");
+        }
 
         long offset = (long) (query.getPageNum() - 1) * query.getPageSize();
         long total = repository.countReceived(user.getUserId(), user.getGroupCode(),
@@ -362,10 +365,22 @@ public class ExpressionShareService {
 
     public List<Map<String, Object>> users(String keyword) {
         UserDetail user = actor();
-        if (keyword == null || keyword.trim().length() < 2 || keyword.length() > 40) {
+        if (keyword == null || keyword.trim().length() < 2 || keyword.trim().length() > 40) {
             return Collections.emptyList();
         }
         return repository.findUsers(keyword.trim(), user.getGroupCode(),
+                user.getOrganizationCode(), user.getUserId());
+    }
+
+    /**
+     * 搜索当前用户收到过分享的人员，仅返回当前用户有权查看的分享来源。
+     */
+    public List<Map<String, Object>> sharers(String keyword) {
+        UserDetail user = actor();
+        if (keyword == null || keyword.trim().length() < 2 || keyword.trim().length() > 40) {
+            return Collections.emptyList();
+        }
+        return repository.findReceivedSharers(keyword.trim(), user.getGroupCode(),
                 user.getOrganizationCode(), user.getUserId());
     }
 

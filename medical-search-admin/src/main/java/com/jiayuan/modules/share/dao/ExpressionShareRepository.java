@@ -168,6 +168,10 @@ public class ExpressionShareRepository {
         appendKeyword(filter, "s", query.getKeyword());
         appendEqualFilter(filter, "s.scope", query.getScope());
         appendEqualFilter(filter, "s.permission", query.getPermission());
+        if (query.getSharerId() != null) {
+            filter.where.append(" AND s.owner_id = ?");
+            filter.params.add(query.getSharerId());
+        }
         return filter;
     }
 
@@ -259,7 +263,7 @@ public class ExpressionShareRepository {
 
     public List<Map<String, Object>> findUsers(
             String keyword, String groupCode, String organizationCode, Long currentUserId) {
-        String like = "%" + keyword.toLowerCase() + "%";
+        String like = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
         return jdbc.query("SELECT user_id, user_name, login_id FROM sys_user " +
                         "WHERE sys_id = 'CBDSES' AND group_code = ? AND organization_code = ? " +
                         "AND user_status = '1' AND user_id <> ? " +
@@ -271,6 +275,32 @@ public class ExpressionShareRepository {
                     user.put("loginId", rs.getString("login_id"));
                     return user;
                 }, groupCode, organizationCode, currentUserId, like, like);
+    }
+
+    /**
+     * 查询当前用户实际可见的分享人，避免把无关人员暴露到筛选选项中。
+     */
+    public List<Map<String, Object>> findReceivedSharers(
+            String keyword, String groupCode, String organizationCode, Long currentUserId) {
+        String like = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
+        String sql = "SELECT * FROM (SELECT DISTINCT u.user_id, u.user_name, u.login_id " +
+                "FROM cbdses_expression_share s " +
+                "INNER JOIN sys_user u ON u.user_id = s.owner_id AND u.sys_id = 'CBDSES' " +
+                "WHERE s.owner_id <> ? AND s.status = 'ACTIVE' " +
+                "AND s.expires_at > CURRENT_TIMESTAMP " +
+                "AND s.group_code = ? AND s.organization_code = ? " +
+                "AND (s.scope = 'HOSPITAL' OR (s.scope = 'USERS' AND EXISTS " +
+                "(SELECT 1 FROM cbdses_expression_share_member m " +
+                "WHERE m.share_id = s.id AND m.user_id = ?))) " +
+                "AND (LOWER(u.user_name) LIKE ? OR LOWER(u.login_id) LIKE ?) " +
+                "ORDER BY u.user_name, u.user_id) WHERE ROWNUM <= 20";
+        return jdbc.query(sql, (rs, rowNum) -> {
+            Map<String, Object> user = new LinkedHashMap<>();
+            user.put("userId", rs.getLong("user_id"));
+            user.put("userName", rs.getString("user_name"));
+            user.put("loginId", rs.getString("login_id"));
+            return user;
+        }, currentUserId, groupCode, organizationCode, currentUserId, like, like);
     }
 
     public void audit(String shareId, Long userId, String action) {

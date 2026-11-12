@@ -16,4 +16,5 @@ public class ExpressionSharePageQuery {
     private String scope;
     private String permission;
     private String source;
+    private Long sharerId;
 }

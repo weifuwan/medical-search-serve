@@ -63,6 +63,7 @@ export interface SharePageQuery {
   scope?: string;
   permission?: string;
   source?: string;
+  sharerId?: number;
 }
 
 export interface SharePageResult<T> {
@@ -103,6 +104,9 @@ export const getReceivedShares = (params: SharePageQuery) =>
 
 export const getShareUsers = (keyword: string) =>
   request<ApiResult<ShareUser[]>>(baseUrl + '/users', { params: { keyword } });
+
+export const getShareSharers = (keyword: string) =>
+  request<ApiResult<ShareUser[]>>(baseUrl + '/sharers', { params: { keyword } });
 
 export const getShareUsage = (code: string) =>
   request<ApiResult<ShareLog[]>>(sharePath(code) + '/usage');

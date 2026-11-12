@@ -25,6 +25,7 @@ import {
   getMyShares,
   getReceivedShares,
   getShareUsage,
+  getShareSharers,
   revokeShare,
   shareLink,
 } from '@/services/expressionShare/api';
@@ -33,6 +34,7 @@ import type {
   ShareItem,
   ShareLog,
   SharePageQuery,
+  ShareUser,
 } from '@/services/expressionShare/api';
 
 type ActiveTab = 'mine' | 'received' | 'favorites';
@@ -88,9 +90,21 @@ const ShareManage: React.FC = () => {
   const [modalCode, setModalCode] = useState<string>();
   const [logs, setLogs] = useState<ShareLog[]>([]);
   const [logsVisible, setLogsVisible] = useState(false);
+  const [sharerOptions, setSharerOptions] = useState<ShareUser[]>([]);
+  const [sharerSearchValue, setSharerSearchValue] = useState('');
+  const [sharerLoading, setSharerLoading] = useState(false);
   const requestIdRef = useRef(0);
+  const sharerSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sharerSearchRequestRef = useRef(0);
 
   const activeQuery = queries[tab];
+
+  useEffect(() => () => {
+    if (sharerSearchTimerRef.current) {
+      clearTimeout(sharerSearchTimerRef.current);
+    }
+    sharerSearchRequestRef.current += 1;
+  }, []);
 
   const refresh = useCallback(async (active: ActiveTab, params: SharePageQuery) => {
     const requestId = ++requestIdRef.current;
@@ -154,6 +168,53 @@ const ShareManage: React.FC = () => {
 
   const handleSearch = () => {
     updateQuery(tab, { keyword: searchInputs[tab].trim() });
+  };
+
+  const handleSharerSearch = (value: string) => {
+    setSharerSearchValue(value);
+    if (sharerSearchTimerRef.current) {
+      clearTimeout(sharerSearchTimerRef.current);
+    }
+
+    const requestId = ++sharerSearchRequestRef.current;
+    const keyword = value.trim();
+    if (keyword.length < 2) {
+      setSharerLoading(false);
+      setSharerOptions((current) =>
+        current.filter((item) => item.userId === queries.received.sharerId),
+      );
+      return;
+    }
+
+    setSharerLoading(true);
+    sharerSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await getShareSharers(keyword);
+        if (requestId !== sharerSearchRequestRef.current) return;
+        if (response.code !== 0) {
+          throw new Error(response.msg || '搜索分享人失败');
+        }
+
+        setSharerOptions((current) => {
+          const selected = current.find(
+            (item) => item.userId === queries.received.sharerId,
+          );
+          const options = response.data || [];
+          if (selected && !options.some((item) => item.userId === selected.userId)) {
+            return [selected, ...options];
+          }
+          return options;
+        });
+      } catch (error: any) {
+        if (requestId === sharerSearchRequestRef.current) {
+          message.error(error.message || '搜索分享人失败');
+        }
+      } finally {
+        if (requestId === sharerSearchRequestRef.current) {
+          setSharerLoading(false);
+        }
+      }
+    }, 300);
   };
 
   const handleSortChange = (value: string) => {
@@ -425,6 +486,33 @@ const ShareManage: React.FC = () => {
 
           {tab === 'received' && (
             <>
+              <Select
+                showSearch
+                allowClear
+                value={activeQuery.sharerId}
+                placeholder="全部分享人"
+                style={{ width: 160 }}
+                filterOption={false}
+                loading={sharerLoading}
+                searchValue={sharerSearchValue}
+                onSearch={handleSharerSearch}
+                onChange={(value?: number) => {
+                  updateQuery('received', { sharerId: value });
+                  if (value == null) {
+                    setSharerSearchValue('');
+                    setSharerOptions([]);
+                  }
+                }}
+                notFoundContent={
+                  sharerSearchValue.trim().length < 2
+                    ? '输入姓名或账号，至少2个字符'
+                    : '没有找到分享人'
+                }
+                options={sharerOptions.map((user) => ({
+                  value: user.userId,
+                  label: user.userName + '（' + user.loginId + '）',
+                }))}
+              />
               <Select
                 value={activeQuery.scope || 'ALL'}
                 style={{ width: 120 }}

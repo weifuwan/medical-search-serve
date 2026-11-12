@@ -42,6 +42,11 @@ public class ExpressionShareController {
         return Result.ok(service.users(keyword));
     }
 
+    @GetMapping("/sharers")
+    public Result<List<Map<String, Object>>> sharers(@RequestParam(required = false) String keyword) {
+        return Result.ok(service.sharers(keyword));
+    }
+
     @GetMapping("/favorites")
     public Result<ExpressionSharePageResult<Map<String, Object>>> favorites(
             @ModelAttribute ExpressionSharePageQuery query) {
