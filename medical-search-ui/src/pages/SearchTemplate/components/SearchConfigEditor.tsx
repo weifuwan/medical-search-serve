@@ -27,12 +27,15 @@ const MAX_SORT_FIELDS = 5;
 const SearchConfigEditor: React.FC<Props> = ({ value, onChange, fields }) => {
   const update = (next: Partial<TemplateSearchConfig>) => onChange({ ...value, ...next });
   const sorts = value.sorts || (value.sort ? [value.sort] : []);
-  const fieldOptions = Array.from(
-    new Map(fields.map((field) => [field.fieldCode, {
-      label: field.fieldName,
-      value: field.fieldCode,
-    }])).values(),
-  );
+  const fieldOptions = fields.reduce<Array<{ label: string; value: string }>>((options, field) => {
+    if (!options.some((option) => option.value === field.fieldCode)) {
+      options.push({
+        label: field.fieldName,
+        value: field.fieldCode,
+      });
+    }
+    return options;
+  }, []);
 
   const updateSorts = (next: TemplateSort[]) => update({
     sorts: next,
