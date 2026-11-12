@@ -63,6 +63,9 @@ public class SearchRequest implements Serializable, Cloneable {
     @ApiModelProperty(value = "排序方式")
     private String orderMode;
 
+    @ApiModelProperty(value = "多字段排序列表，数组顺序即排序优先级")
+    private List<SearchSortDTO> sorts;
+
     @ApiModelProperty(value = "是否需要高亮", hidden = true)
     private Boolean highlight = false;
 

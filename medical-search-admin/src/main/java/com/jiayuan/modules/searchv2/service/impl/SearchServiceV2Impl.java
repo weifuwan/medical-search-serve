@@ -2,6 +2,7 @@ package com.jiayuan.modules.searchv2.service.impl;
 
 import com.jiayuan.modules.search.dto.EsPageData;
 import com.jiayuan.modules.search.request.SearchRequest;
+import com.jiayuan.modules.search.request.SearchSortDTO;
 import com.jiayuan.modules.search.service.LogSearchService;
 import com.jiayuan.modules.search.service.ResultFieldService;
 import com.jiayuan.modules.searchv2.component.SearchV2Component;
@@ -65,19 +66,31 @@ public class SearchServiceV2Impl implements SearchServiceV2 {
                 if (config.getDimension() != null && request.getDimension() == null) {
                     request.setDimension(config.getDimension());
                 }
-                if (config.getSort() != null ||
-                        config.getColumns() != null && !config.getColumns().isEmpty()) {
+                List<TemplateSearchConfig.Sort> configuredSorts = config.getEffectiveSorts();
+                if (!configuredSorts.isEmpty()
+                        || config.getColumns() != null && !config.getColumns().isEmpty()) {
                     Map<String, FieldDTO> available = new LinkedHashMap<>();
                     for (FieldDTO field : tableFieldService.getShowFieldsByTableId("ms_visit_record")) {
                         available.put(field.getFieldCode(), field);
                     }
-                    if (config.getSort() != null) {
-                        if (!available.containsKey(config.getSort().getFieldCode())) {
-                            throw new BizException("检索模板中的排序字段已不可用");
+                    if (!configuredSorts.isEmpty()) {
+                        List<SearchSortDTO> sorts = new ArrayList<>();
+                        for (TemplateSearchConfig.Sort configuredSort : configuredSorts) {
+                            if (!"ms_visit_record".equals(configuredSort.getTableCode())
+                                    || !available.containsKey(configuredSort.getFieldCode())) {
+                                throw new BizException("检索模板中的排序字段已不可用");
+                            }
+                            SearchSortDTO sort = new SearchSortDTO();
+                            sort.setTableCode(configuredSort.getTableCode());
+                            sort.setFieldCode(configuredSort.getFieldCode());
+                            sort.setMode(configuredSort.getMode());
+                            sorts.add(sort);
                         }
+                        request.setSorts(sorts);
+                        // 同步首个排序字段，兼容仍读取旧排序属性的调用方。
                         request.setOrderTableCode("ms_visit_record");
-                        request.setOrderFieldCode(config.getSort().getFieldCode());
-                        request.setOrderMode(config.getSort().getMode());
+                        request.setOrderFieldCode(sorts.get(0).getFieldCode());
+                        request.setOrderMode(sorts.get(0).getMode());
                     }
                     if (config.getColumns() != null && !config.getColumns().isEmpty()) {
                         List<FieldDTO> selected = new ArrayList<>();
