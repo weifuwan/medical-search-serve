@@ -326,7 +326,7 @@ const ShareManage: React.FC = () => {
     ? [
         { value: 'updatedAt:DESC', label: '最近更新' },
         { value: 'createdAt:DESC', label: '最新创建' },
-        { value: 'expiresAt:ASC', label: '即将到期' },
+        { value: 'expiresAt:ASC', label: '到期时间升序' },
         { value: 'title:ASC', label: '名称升序' },
       ]
     : tab === 'received'
@@ -374,10 +374,16 @@ const ShareManage: React.FC = () => {
             placeholder="搜索名称或检索表达式"
             style={{ width: 280 }}
             enterButton="搜索"
-            onChange={(event) => setSearchInputs((current) => ({
-              ...current,
-              [tab]: event.target.value,
-            }))}
+            onChange={(event) => {
+              const value = event.target.value;
+              setSearchInputs((current) => ({
+                ...current,
+                [tab]: value,
+              }));
+              if (!value) {
+                updateQuery(tab, { keyword: '' });
+              }
+            }}
             onSearch={handleSearch}
           />
 
