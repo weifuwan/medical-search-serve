@@ -14,6 +14,8 @@ export interface TemplateColumn {
 export interface TemplateSearchConfig {
   dimension: 0 | 1;
   scopeExpression: string;
+  sorts: TemplateSort[];
+  /** 兼容历史模板的单字段排序配置 */
   sort?: TemplateSort;
   pageSize: 10 | 20 | 50 | 100;
   viewMode: 'TABLE' | 'CARD';
@@ -29,6 +31,7 @@ export interface ActiveSearchTemplate {
 export const defaultSearchConfig: TemplateSearchConfig = {
   dimension: 0,
   scopeExpression: '',
+  sorts: [],
   pageSize: 10,
   viewMode: 'TABLE',
   columns: [],
@@ -38,9 +41,17 @@ export const readSearchConfig = (raw?: string): TemplateSearchConfig => {
   if (!raw) return { ...defaultSearchConfig, columns: [] };
   try {
     const data: Partial<TemplateSearchConfig> = JSON.parse(raw);
+    const sorts = Array.isArray(data.sorts)
+      ? data.sorts
+      : data.sort
+        ? [data.sort]
+        : [];
+
     return {
       ...defaultSearchConfig,
       ...data,
+      sorts,
+      sort: undefined,
       dimension: data.dimension === 1 ? 1 : 0,
       pageSize: [10, 20, 50, 100].includes(Number(data.pageSize))
         ? data.pageSize as TemplateSearchConfig['pageSize'] : 10,

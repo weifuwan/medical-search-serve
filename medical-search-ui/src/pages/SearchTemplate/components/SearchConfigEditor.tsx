@@ -1,6 +1,15 @@
 import React from 'react';
-import { Input, Radio, Select } from 'antd';
-import type { TemplateSearchConfig } from '@/services/searchTemplate/searchConfig';
+import { Button, Input, Radio, Select } from 'antd';
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
+import type {
+  TemplateSearchConfig,
+  TemplateSort,
+} from '@/services/searchTemplate/searchConfig';
 
 interface FieldOption {
   fieldCode: string;
@@ -13,12 +22,61 @@ interface Props {
   fields: FieldOption[];
 }
 
+const MAX_SORT_FIELDS = 5;
+
 const SearchConfigEditor: React.FC<Props> = ({ value, onChange, fields }) => {
   const update = (next: Partial<TemplateSearchConfig>) => onChange({ ...value, ...next });
-  const fieldOptions = fields.map((field) => ({
-    label: field.fieldName,
-    value: field.fieldCode,
-  }));
+  const sorts = value.sorts || (value.sort ? [value.sort] : []);
+  const fieldOptions = Array.from(
+    new Map(fields.map((field) => [field.fieldCode, {
+      label: field.fieldName,
+      value: field.fieldCode,
+    }])).values(),
+  );
+
+  const updateSorts = (next: TemplateSort[]) => update({
+    sorts: next,
+    sort: undefined,
+  });
+
+  const updateSort = (index: number, next: Partial<TemplateSort>) => {
+    updateSorts(sorts.map((item, itemIndex) => (
+      itemIndex === index ? { ...item, ...next } : item
+    )));
+  };
+
+  const addSort = () => {
+    if (sorts.length >= MAX_SORT_FIELDS) return;
+
+    const usedFields = new Set(sorts.map((item) => item.fieldCode));
+    const nextField = fieldOptions.find((field) => !usedFields.has(field.value));
+    if (!nextField) return;
+
+    updateSorts([
+      ...sorts,
+      {
+        tableCode: 'ms_visit_record',
+        fieldCode: nextField.value,
+        mode: 'desc',
+      },
+    ]);
+  };
+
+  const removeSort = (index: number) => {
+    updateSorts(sorts.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const moveSort = (index: number, offset: number) => {
+    const targetIndex = index + offset;
+    if (targetIndex < 0 || targetIndex >= sorts.length) return;
+
+    const next = [...sorts];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    updateSorts(next);
+  };
+
+  const canAddSort = sorts.length < MAX_SORT_FIELDS
+    && fieldOptions.some((field) => !sorts.some((item) => item.fieldCode === field.value));
 
   return (
     <div className="search-config-panel">
@@ -35,36 +93,82 @@ const SearchConfigEditor: React.FC<Props> = ({ value, onChange, fields }) => {
           </Radio.Group>
         </div>
 
-        <div className="search-config-item">
+        <div className="search-config-item search-config-item-wide search-config-item-sort">
           <span className="search-config-label">排序</span>
-          <div className="search-config-control search-config-sort">
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder="默认顺序"
-              value={value.sort?.fieldCode}
-              options={fieldOptions}
-              onChange={(fieldCode: string | undefined) => update({
-                sort: fieldCode ? {
-                  tableCode: 'ms_visit_record',
-                  fieldCode,
-                  mode: value.sort?.mode || 'desc',
-                } : undefined,
-              })}
-            />
-            <Select
-              className="search-config-order"
-              disabled={!value.sort}
-              value={value.sort?.mode || 'desc'}
-              options={[
-                { label: '升序', value: 'asc' },
-                { label: '降序', value: 'desc' },
-              ]}
-              onChange={(mode) => update({
-                sort: value.sort ? { ...value.sort, mode } : undefined,
-              })}
-            />
+          <div className="search-config-sort-editor">
+            {sorts.length === 0 ? (
+              <span className="search-config-sort-empty">默认顺序</span>
+            ) : (
+              sorts.map((sort, index) => (
+                <div className="search-config-sort-row" key={`${sort.fieldCode}-${index}`}>
+                  <span className="search-config-sort-index">{index + 1}</span>
+                  <Select
+                    showSearch
+                    optionFilterProp="label"
+                    value={sort.fieldCode}
+                    options={fieldOptions.map((option) => ({
+                      ...option,
+                      disabled: sorts.some((item, itemIndex) => (
+                        itemIndex !== index && item.fieldCode === option.value
+                      )),
+                    }))}
+                    onChange={(fieldCode: string) => updateSort(index, { fieldCode })}
+                  />
+                  <Select
+                    className="search-config-order"
+                    value={sort.mode}
+                    options={[
+                      { label: '升序', value: 'asc' },
+                      { label: '降序', value: 'desc' },
+                    ]}
+                    onChange={(mode: 'asc' | 'desc') => updateSort(index, { mode })}
+                  />
+                  <div className="search-config-sort-actions">
+                    <Button
+                      type="text"
+                      size="small"
+                      title="上移"
+                      aria-label="上移"
+                      icon={<ArrowUpOutlined />}
+                      disabled={index === 0}
+                      onClick={() => moveSort(index, -1)}
+                    />
+                    <Button
+                      type="text"
+                      size="small"
+                      title="下移"
+                      aria-label="下移"
+                      icon={<ArrowDownOutlined />}
+                      disabled={index === sorts.length - 1}
+                      onClick={() => moveSort(index, 1)}
+                    />
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      title="删除"
+                      aria-label="删除"
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeSort(index)}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+            <div className="search-config-sort-add">
+              <Button
+                type="dashed"
+                size="small"
+                icon={<PlusOutlined />}
+                disabled={!canAddSort}
+                onClick={addSort}
+              >
+                添加排序条件
+              </Button>
+              <span className="search-config-sort-hint">
+                按顺序执行，最多 {MAX_SORT_FIELDS} 个字段
+              </span>
+            </div>
           </div>
         </div>
 
