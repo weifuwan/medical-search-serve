@@ -34,9 +34,36 @@ public class SearchV2Component {
     private final KeywordMatcher keywordMatcher;  // Component for matching keywords
 
     /**
+     * Run the same KEYWORD/EXPRESSION detection and V2 matching pipeline,
+     * but stop after producing the unique visit_no set.
+     */
+    public List<String> searchVisitNos(String expression) {
+        if (StrUtil.isBlank(expression)) {
+            throw new BizException("检索表达式不能为空");
+        }
+        try {
+            boolean keywordMode = ReUtil.isMatch(Symbol.Type.DATA_SINGLE.getRegex(), expression);
+            if (keywordMode) {
+                SearchRequest request = new SearchRequest();
+                request.setExpression(expression);
+                SearchDTO dto = SearchDTO.builder().searchRequest(request).build();
+                keywordMatcher.toSetKeywordSearchFields(dto);
+                return expressionParserComponent.keywordSearchVisitNos(dto.getKeywordSearchFields(), expression);
+            }
+            return expressionParserComponent.getMatchedVisitNos(expression);
+        } catch (Exception e) {
+            String message = StrUtil.isNotBlank(e.getMessage())
+                    ? e.getMessage()
+                    : "Search expression error, please check and resubmit";
+            log.error(message, e);
+            throw new BizException(message, e);
+        }
+    }
+
+    /**
      * Performs search based on the search request
      *
-     * @param request The search request containing expression and other parameters
+     * @param request The search request containing query parameters
      * @return SearchVo containing search results
      */
     public SearchVo search(SearchRequest request) {

@@ -571,6 +571,58 @@ public class ExpressionParserComponent {
     }
 
     /**
+     * Execute the V2 expression pipeline and return only the unique visit_no set.
+     * The same cache is shared with the full-detail search path.
+     */
+    public List<String> getMatchedVisitNos(String condition) throws Exception {
+        if (StringUtils.isBlank(condition)) {
+            throw new IllegalArgumentException("Search condition cannot be null or empty");
+        }
+        String normalizedCondition = condition.trim();
+        String conditionHash = generateConditionHash(normalizedCondition);
+        NodeQueryVo matchedResults = cache.getIfPresent(conditionHash);
+        if (matchedResults == null) {
+            matchedResults = getJoinedResults(normalizedCondition);
+            cache.put(conditionHash, matchedResults);
+        }
+        if (matchedResults.getResult() == null || matchedResults.getResult().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(matchedResults.getResult());
+    }
+
+    /**
+     * Keyword-mode counterpart of keywordSearch that stops after visit_no matching.
+     */
+    public List<String> keywordSearchVisitNos(List<FieldDTO> buildList, String keyword) throws Exception {
+        return getMatchedVisitNos(buildKeywordExpression(buildList, keyword));
+    }
+
+    private String buildKeywordExpression(List<FieldDTO> buildList, String keyword) {
+        if (buildList == null || buildList.isEmpty()) {
+            throw new BizException("没有设置默认匹配规则");
+        }
+        StringBuilder keywordExpression = new StringBuilder();
+        for (FieldDTO fieldDTO : buildList) {
+            QueryNode build = QueryNode.builder()
+                    .indexName(fieldDTO.getTableCode())
+                    .indexNameEn(fieldDTO.getTableName())
+                    .fieldName(fieldDTO.getFieldCode())
+                    .fieldNameEn(fieldDTO.getFieldName())
+                    .lastOperator(Symbol.LogicEnum.OR)
+                    .fieldType(fieldDTO.getDataType())
+                    .value(keyword)
+                    .operator(Symbol.RelationalEnum.LIKE)
+                    .build();
+            keywordExpression.append(build.toString());
+        }
+        if (keywordExpression.length() > 0) {
+            keywordExpression.setLength(keywordExpression.length() - 4);
+        }
+        return keywordExpression.toString();
+    }
+
+    /**
      * Executes a complex search query and returns joined results from multiple indices.
      *
      * @param condition The search condition string to parse and execute
@@ -1231,92 +1283,134 @@ public class ExpressionParserComponent {
     /**
      * 通过 multi query 来实现查询。
      */
+    private static class CompositeQueryCursor {
+        private final QueryNode query;
+        private final String indexName;
+        private final QueryBuilder queryBuilder;
+        private final Set<String> visitNos = new HashSet<>();
+        private Map<String, Object> afterKey;
+        private boolean completed;
+
+        private CompositeQueryCursor(QueryNode query, String indexName, QueryBuilder queryBuilder) {
+            this.query = query;
+            this.indexName = indexName;
+            this.queryBuilder = queryBuilder;
+        }
+    }
+
+    /**
+     * Execute composite aggregations in batches and continue with after_key
+     * until every matching visit_no has been collected.
+     */
     public Set<String> executeQueriesBatch(List<QueryNode> queries) throws IOException {
         long start = System.currentTimeMillis();
-
-        MultiSearchRequest multiSearchRequest = new MultiSearchRequest();
-
-        for (QueryNode query : queries) {
-            String indexName = extractIndexFromQuery(query);
-
-            org.elasticsearch.action.search.SearchRequest searchRequest =
-                    new org.elasticsearch.action.search.SearchRequest(indexName);
-
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-
-            QueryBuilder queryBuilder = buildQueryFromCondition(query);
-            searchSourceBuilder.query(queryBuilder);
-
-            CompositeAggregationBuilder compositeAgg = AggregationBuilders.composite(
-                    "distinct_visit_no",
-                    Collections.singletonList(
-                            new TermsValuesSourceBuilder("visit_no")
-                                    .field("visit_no.keyword")
-                    )
-            ).size(65535);
-
-            searchSourceBuilder.aggregation(compositeAgg);
-            searchSourceBuilder.size(0);
-
-            searchRequest.source(searchSourceBuilder);
-            log.info("searchSourceBuilder = " + searchSourceBuilder);
-
-            multiSearchRequest.add(searchRequest);
+        if (queries == null || queries.isEmpty()) {
+            return Collections.emptySet();
         }
 
-        MultiSearchResponse multiSearchResponse =
-                client.msearch(multiSearchRequest, RequestOptions.DEFAULT);
+        List<CompositeQueryCursor> cursors = new ArrayList<>();
+        for (QueryNode query : queries) {
+            cursors.add(new CompositeQueryCursor(
+                    query, extractIndexFromQuery(query), buildQueryFromCondition(query)));
+        }
+
+        while (true) {
+            List<CompositeQueryCursor> activeCursors = new ArrayList<>();
+            MultiSearchRequest multiSearchRequest = new MultiSearchRequest();
+
+            for (CompositeQueryCursor cursor : cursors) {
+                if (cursor.completed) {
+                    continue;
+                }
+                SearchSourceBuilder source = new SearchSourceBuilder()
+                        .query(cursor.queryBuilder)
+                        .size(0);
+                CompositeAggregationBuilder compositeAgg = AggregationBuilders.composite(
+                        "distinct_visit_no",
+                        Collections.singletonList(
+                                new TermsValuesSourceBuilder("visit_no").field("visit_no.keyword")
+                        )
+                ).size(1000);
+                if (cursor.afterKey != null) {
+                    compositeAgg.aggregateAfter(cursor.afterKey);
+                }
+                source.aggregation(compositeAgg);
+                multiSearchRequest.add(
+                        new org.elasticsearch.action.search.SearchRequest(cursor.indexName).source(source));
+                activeCursors.add(cursor);
+            }
+
+            if (activeCursors.isEmpty()) {
+                break;
+            }
+
+            MultiSearchResponse response = client.msearch(multiSearchRequest, RequestOptions.DEFAULT);
+            if (response.getResponses().length != activeCursors.size()) {
+                throw new IOException("Elasticsearch returned an incomplete multi-search response");
+            }
+
+            for (int i = 0; i < activeCursors.size(); i++) {
+                CompositeQueryCursor cursor = activeCursors.get(i);
+                MultiSearchResponse.Item item = response.getResponses()[i];
+                if (item.getFailure() != null) {
+                    throw new IOException("Elasticsearch query failed: " + item.getFailure().getMessage(),
+                            item.getFailure());
+                }
+
+                SearchResponse searchResponse = item.getResponse();
+                ParsedComposite composite = searchResponse == null
+                        ? null
+                        : searchResponse.getAggregations().get("distinct_visit_no");
+                if (composite == null) {
+                    throw new IOException("Elasticsearch response is missing distinct_visit_no aggregation");
+                }
+
+                cursor.visitNos.addAll(extractVisitNosFromAggregation(searchResponse));
+                Map<String, Object> nextAfterKey = composite.afterKey();
+                if (composite.getBuckets().isEmpty() || nextAfterKey == null) {
+                    cursor.completed = true;
+                } else if (nextAfterKey.equals(cursor.afterKey)) {
+                    throw new IOException("Elasticsearch composite aggregation after_key did not advance");
+                } else {
+                    cursor.afterKey = nextAfterKey;
+                }
+            }
+        }
 
         Set<String> finalResultSet = new HashSet<>();
         Set<String> currentAndSet = null;
-
-        int queryIndex = 0;
-        for (MultiSearchResponse.Item item : multiSearchResponse.getResponses()) {
-            if (item.getFailure() != null) {
-                log.error("Error with query: " + item.getFailure().getMessage());
-                throw new IOException(
-                        "Elasticsearch query failed",
-                        item.getFailure()
-                );
-            }
-
-            SearchResponse response = item.getResponse();
-            Set<String> visitNos = extractVisitNosFromAggregation(response);
-            QueryNode query = queries.get(queryIndex);
-
+        for (int queryIndex = 0; queryIndex < cursors.size(); queryIndex++) {
+            CompositeQueryCursor cursor = cursors.get(queryIndex);
+            Set<String> visitNos = cursor.visitNos;
             if (queryIndex == 0) {
                 finalResultSet.addAll(visitNos);
-            } else {
-                boolean isAnd = query.getLastOperator() != null
-                        && query.getLastOperator().equals(Symbol.LogicEnum.AND);
-
-                if (isAnd) {
-                    if (currentAndSet == null) {
-                        currentAndSet = new HashSet<>(finalResultSet);
-                        currentAndSet.retainAll(visitNos);
-                        finalResultSet.clear();
-                    } else {
-                        currentAndSet.retainAll(visitNos);
-                    }
-                } else {
-                    if (currentAndSet != null) {
-                        finalResultSet.addAll(currentAndSet);
-                        currentAndSet = null;
-                    }
-                    finalResultSet.addAll(visitNos);
-                }
+                continue;
             }
 
-            queryIndex++;
+            boolean isAnd = cursor.query.getLastOperator() != null
+                    && cursor.query.getLastOperator().equals(Symbol.LogicEnum.AND);
+            if (isAnd) {
+                if (currentAndSet == null) {
+                    currentAndSet = new HashSet<>(finalResultSet);
+                    currentAndSet.retainAll(visitNos);
+                    finalResultSet.clear();
+                } else {
+                    currentAndSet.retainAll(visitNos);
+                }
+            } else {
+                if (currentAndSet != null) {
+                    finalResultSet.addAll(currentAndSet);
+                    currentAndSet = null;
+                }
+                finalResultSet.addAll(visitNos);
+            }
         }
-
         if (currentAndSet != null) {
             finalResultSet.addAll(currentAndSet);
         }
 
-        long end = System.currentTimeMillis();
-        log.info("Total time for batch queries: " + (end - start) + " ms");
-
+        log.info("Total time for paged batch queries: {} ms, matched visit_no count: {}",
+                System.currentTimeMillis() - start, finalResultSet.size());
         return finalResultSet;
     }
 
@@ -1501,31 +1595,7 @@ public class ExpressionParserComponent {
      * @return SearchVo containing the search results
      */
     public SearchVo keywordSearch(List<FieldDTO> buildList, SearchRequest searchRequest) {
-        StringBuilder keywordExpression = new StringBuilder();
-
-        for (FieldDTO fieldDTO : buildList) {
-            QueryNode build = QueryNode.builder()
-                    .indexName(fieldDTO.getTableCode())
-                    .indexNameEn(fieldDTO.getTableName())
-                    .fieldName(fieldDTO.getFieldCode())
-                    .fieldNameEn(fieldDTO.getFieldName())
-                    .lastOperator(Symbol.LogicEnum.OR)
-                    .fieldType(fieldDTO.getDataType())
-                    .value(searchRequest.getExpression())
-                    .operator(Symbol.RelationalEnum.LIKE)
-                    .build();
-
-            keywordExpression.append(build.toString());
-        }
-
-        if (keywordExpression.length() > 0) {
-            keywordExpression.setLength(keywordExpression.length() - 4);
-        }
-
-        log.info("parsed keywordExpression = " + keywordExpression);
-
-        searchRequest.setExpression(keywordExpression.toString());
-
+        searchRequest.setExpression(buildKeywordExpression(buildList, searchRequest.getExpression()));
         return search(searchRequest);
     }
 }
