@@ -1367,11 +1367,10 @@ public class ExpressionParserComponent {
 
                 cursor.visitNos.addAll(extractVisitNosFromAggregation(searchResponse));
                 Map<String, Object> nextAfterKey = composite.afterKey();
-                if (nextAfterKey != null && nextAfterKey.equals(cursor.afterKey)) {
-                    throw new IOException("Elasticsearch composite aggregation after_key did not advance");
-                }
-                if (nextAfterKey == null || composite.getBuckets().isEmpty()) {
+                if (composite.getBuckets().isEmpty() || nextAfterKey == null) {
                     cursor.completed = true;
+                } else if (nextAfterKey.equals(cursor.afterKey)) {
+                    throw new IOException("Elasticsearch composite aggregation after_key did not advance");
                 } else {
                     cursor.afterKey = nextAfterKey;
                 }
