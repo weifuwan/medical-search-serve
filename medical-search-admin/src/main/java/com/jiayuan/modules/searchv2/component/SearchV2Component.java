@@ -34,12 +34,6 @@ public class SearchV2Component {
     private final KeywordMatcher keywordMatcher;  // Component for matching keywords
 
     /**
-     * Performs search based on the search request
-     *
-     * @param request The search request containing expression and other parameters
-     * @return SearchVo containing search results
-     */
-    /**
      * Run the same KEYWORD/EXPRESSION detection and V2 matching pipeline,
      * but stop after producing the unique visit_no set.
      */
