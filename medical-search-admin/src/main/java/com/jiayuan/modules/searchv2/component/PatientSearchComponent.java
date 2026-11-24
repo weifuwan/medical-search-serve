@@ -192,11 +192,18 @@ public class PatientSearchComponent {
             );
 
             ParsedComposite parsed = response.getAggregations().get("unique_visit_no");
-            if (parsed == null || parsed.getBuckets().isEmpty()) {
+            if (parsed == null) {
+                throw new IOException("Elasticsearch response is missing unique_visit_no aggregation");
+            }
+            if (parsed.getBuckets().isEmpty()) {
                 break;
             }
             total += parsed.getBuckets().size();
-            afterKey = parsed.afterKey();
+            Map<String, Object> nextAfterKey = parsed.afterKey();
+            if (nextAfterKey != null && nextAfterKey.equals(afterKey)) {
+                throw new IOException("Elasticsearch composite aggregation after_key did not advance");
+            }
+            afterKey = nextAfterKey;
             if (afterKey == null) {
                 break;
             }

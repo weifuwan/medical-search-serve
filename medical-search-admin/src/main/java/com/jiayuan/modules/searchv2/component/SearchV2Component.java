@@ -66,6 +66,12 @@ public class SearchV2Component {
         }
     }
 
+    /**
+     * Performs search based on the search request
+     *
+     * @param request The search request containing query parameters
+     * @return SearchVo containing search results
+     */
     public SearchVo search(SearchRequest request) {
         request.setExport(false);
         // Build search DTO from request

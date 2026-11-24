@@ -571,13 +571,6 @@ public class ExpressionParserComponent {
     }
 
     /**
-     * Executes a complex search query and returns joined results from multiple indices.
-     *
-     * @param condition The search condition string to parse and execute
-     * @return NodeQueryVo containing the unified results and original query definitions
-     * @throws Exception if query parsing or execution fails
-     */
-    /**
      * Execute the V2 expression pipeline and return only the unique visit_no set.
      * The same cache is shared with the full-detail search path.
      */
@@ -629,6 +622,13 @@ public class ExpressionParserComponent {
         return keywordExpression.toString();
     }
 
+    /**
+     * Executes a complex search query and returns joined results from multiple indices.
+     *
+     * @param condition The search condition string to parse and execute
+     * @return NodeQueryVo containing the unified results and original query definitions
+     * @throws Exception if query parsing or execution fails
+     */
     public NodeQueryVo getJoinedResults(String condition) throws Exception {
         if (StringUtils.isBlank(condition)) {
             throw new IllegalArgumentException("Search condition cannot be null or empty");
@@ -1367,6 +1367,9 @@ public class ExpressionParserComponent {
 
                 cursor.visitNos.addAll(extractVisitNosFromAggregation(searchResponse));
                 Map<String, Object> nextAfterKey = composite.afterKey();
+                if (nextAfterKey != null && nextAfterKey.equals(cursor.afterKey)) {
+                    throw new IOException("Elasticsearch composite aggregation after_key did not advance");
+                }
                 if (nextAfterKey == null || composite.getBuckets().isEmpty()) {
                     cursor.completed = true;
                 } else {
