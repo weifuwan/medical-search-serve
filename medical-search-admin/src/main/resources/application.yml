@@ -12,6 +12,11 @@ server:
       cookie:
         http-only: true
 
+# Shared token for the patient count/list APIs. Keep the real value in an environment variable.
+medical-search:
+  patient-api:
+    token: ${MEDICAL_SEARCH_PATIENT_API_TOKEN:}
+
 knife4j:
   enable: true
   basic:
@@ -59,5 +64,3 @@ mybatis-plus:
     prefix:
     blobType: BLOB
     boolValue: TRUE
-
-

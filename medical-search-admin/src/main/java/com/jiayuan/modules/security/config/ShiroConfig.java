@@ -1,7 +1,7 @@
-
 package com.jiayuan.modules.security.config;
 
 import com.jiayuan.common.constant.BizConstant;
+import com.jiayuan.modules.security.filter.PatientApiTokenFilter;
 import com.jiayuan.modules.security.oauth2.Oauth2Filter;
 import com.jiayuan.modules.security.oauth2.Oauth2Realm;
 import org.apache.shiro.mgt.SecurityManager;
@@ -11,6 +11,7 @@ import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSource
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -45,14 +46,23 @@ public class ShiroConfig {
         return securityManager;
     }
 
+    @Bean
+    public PatientApiTokenFilter patientApiTokenFilter(
+            @Value("${medical-search.patient-api.token:}") String token) {
+        return new PatientApiTokenFilter(token);
+    }
+
     @Bean("shiroFilter")
-    public ShiroFilterFactoryBean shirFilter(SecurityManager securityManager) {
+    public ShiroFilterFactoryBean shirFilter(
+            SecurityManager securityManager,
+            PatientApiTokenFilter patientApiTokenFilter) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
 
-        //oauth过滤
+        // Register independent authentication filters.
         Map<String, Filter> filters = new HashMap<>(16);
         filters.put("oauth2", new Oauth2Filter());
+        filters.put("patientApiToken", patientApiTokenFilter);
         shiroFilter.setFilters(filters);
 
         Map<String, String> filterMap = new LinkedHashMap<>();
@@ -69,6 +79,13 @@ public class ShiroConfig {
         filterMap.put("/favicon.ico", "anon");
         filterMap.put(BizConstant.RESOURCE_PREFIX + "/**", "anon");
         filterMap.put("/", "anon");
+
+        // Patient APIs use a shared API token and do not require a logged-in user.
+        // Shiro sees paths without the servlet context path (/medical-search-admin).
+        filterMap.put("/patient/count", "patientApiToken");
+        filterMap.put("/patient/list", "patientApiToken");
+
+        // All other protected APIs keep the existing user-token authentication.
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
 
