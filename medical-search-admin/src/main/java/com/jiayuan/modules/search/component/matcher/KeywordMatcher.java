@@ -1,6 +1,7 @@
 package com.jiayuan.modules.search.component.matcher;
 
 import cn.hutool.core.collection.CollectionUtil;
+import com.jiayuan.common.constant.Symbol;
 import com.jiayuan.common.exception.BizException;
 import com.jiayuan.common.utils.ConvertUtils;
 import com.jiayuan.modules.search.dto.KeywordConfigDTO;
@@ -22,6 +23,10 @@ public class KeywordMatcher {
 
     @Resource
     protected KeywordConfigService keywordConfigService;
+
+    public Symbol.Type regex() {
+        return Symbol.Type.DATA_SINGLE;
+    }
 
     /**
      * 使用当前登录用户的关键词匹配配置。
