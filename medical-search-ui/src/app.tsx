@@ -130,10 +130,10 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
     logo:
       initialState?.logoUrl ||
       getLocalVal('logoUrl') ||
-      '/my.png' ||
+      '/favicon.ico' ||
       'https://www.scjydz.com/favicon.ico',
     onMenuHeaderClick: undefined, // 去除点击 logo 跳转到首页
-    title: initialState?.loginName || "隆昌市人民医院",
+    title: initialState?.loginName || "临床大数据搜索引擎系统",
     // title: localStorage.getItem('hispitalName') || '临床大数据搜索引擎系统',
     // title: '佳缘科技',
     // waterMarkProps: {// 页面水印
@@ -221,7 +221,7 @@ export const request = {
   // baseURL: 'http://171.223.208.184:20000'// 此处配置基本路径
   // baseURL: 'http://192.168.30.143:20000'// 此处配置基本路径
   // baseURL: 'http://10.231.30.201:20000'// 此处配置基本路径
-  // baseURL: 'http://192.168.30.144:8080'// 此处配置基本路径
+  // baseURL: 'http://172.16.2.80:8082'// 172.16.2.80
   // baseURL: 'http://10.10.102.12:8080'// 绵阳环境
   baseURL: 'http://localhost:8080', // 本地测试环境
   // baseURL: 'http://192.168.1.115:8082'// wfw base url

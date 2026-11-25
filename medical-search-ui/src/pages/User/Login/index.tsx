@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const jumpPath = '/transition/index';
-const defaultHospitalName = '隆昌医院';
+const defaultHospitalName = '佳缘科技股份有限公司';
 
 const MedicalIcon: React.FC = () => (
   <svg viewBox="0 0 64 64" aria-hidden="true" className={styles.medicalIcon}>
@@ -123,7 +123,7 @@ const Login: React.FC = () => {
         <div className={styles.brandCopy}>
           <div className={styles.hospitalName}>{hospitalName}</div>
           {hospitalName === defaultHospitalName && (
-            <div className={styles.hospitalEnglish}>LONGCHANG HOSPITAL</div>
+            <div className={styles.hospitalEnglish}></div>
           )}
         </div>
       </header>

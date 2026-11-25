@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 
 /** Patient-scope APIs. All result identity and pagination use visit_no. */
 @RestController
-@RequestMapping("index/patient")
+@RequestMapping("patient")
 @Api(tags = "患者范围检索")
 public class PatientSearchController {
 
