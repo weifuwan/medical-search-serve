@@ -34,10 +34,25 @@ public class SearchV2Component {
     private final KeywordMatcher keywordMatcher;  // Component for matching keywords
 
     /**
-     * Run the same KEYWORD/EXPRESSION detection and V2 matching pipeline,
-     * but stop after producing the unique visit_no set.
+     * Run the existing keyword/expression detection pipeline using the current
+     * Shiro user context. Kept for callers that rely on normal user authentication.
      */
     public List<String> searchVisitNos(String expression) {
+        return searchVisitNos(expression, null, false);
+    }
+
+    /**
+     * Run the patient API search pipeline using an explicitly configured
+     * keyword configuration owner. The owner is configuration scope only and
+     * is not used to create or impersonate a Shiro principal.
+     */
+    public List<String> searchVisitNos(String expression, Long keywordConfigUserId) {
+        return searchVisitNos(expression, keywordConfigUserId, true);
+    }
+
+    private List<String> searchVisitNos(String expression,
+                                        Long keywordConfigUserId,
+                                        boolean useConfiguredUserId) {
         if (StrUtil.isBlank(expression)) {
             throw new BizException("检索表达式不能为空");
         }
@@ -47,7 +62,16 @@ public class SearchV2Component {
                 SearchRequest request = new SearchRequest();
                 request.setExpression(expression);
                 SearchDTO dto = SearchDTO.builder().searchRequest(request).build();
-                keywordMatcher.toSetKeywordSearchFields(dto);
+
+                if (useConfiguredUserId) {
+                    if (keywordConfigUserId == null || keywordConfigUserId <= 0) {
+                        throw new BizException("患者 API 未配置有效的关键词匹配配置用户 ID，请设置 medical-search.patient-api.keyword-config-user-id");
+                    }
+                    keywordMatcher.toSetKeywordSearchFields(dto, keywordConfigUserId);
+                } else {
+                    keywordMatcher.toSetKeywordSearchFields(dto);
+                }
+
                 return expressionParserComponent.keywordSearchVisitNos(dto.getKeywordSearchFields(), expression);
             }
             return expressionParserComponent.getMatchedVisitNos(expression);
@@ -64,7 +88,7 @@ public class SearchV2Component {
      * Performs search based on the search request
      *
      * @param request The search request containing query parameters
-     * @return SearchVo containing search results
+     * @return SearchVo containing search results and metadata
      */
     public SearchVo search(SearchRequest request) {
         request.setExport(false);

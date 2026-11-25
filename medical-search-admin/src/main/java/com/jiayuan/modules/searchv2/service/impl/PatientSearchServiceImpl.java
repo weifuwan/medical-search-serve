@@ -8,6 +8,7 @@ import com.jiayuan.modules.searchv2.dto.PatientListVO;
 import com.jiayuan.modules.searchv2.dto.PatientSearchRequest;
 import com.jiayuan.modules.searchv2.service.PatientSearchService;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -22,10 +23,18 @@ public class PatientSearchServiceImpl implements PatientSearchService {
     @Resource
     private PatientSearchComponent patientSearchComponent;
 
+    /**
+     * Owner of the keyword search configuration used by the fixed-token APIs.
+     * This is a configuration scope, not an authenticated user identity.
+     */
+    @Value("${medical-search.patient-api.keyword-config-user-id:0}")
+    private Long keywordConfigUserId;
+
     @Override
     public PatientCountVO count(PatientSearchRequest request) {
         validateRequest(request);
-        List<String> visitNos = searchV2Component.searchVisitNos(request.getExpression());
+        List<String> visitNos = searchV2Component.searchVisitNos(
+                request.getExpression(), getKeywordConfigUserId());
         try {
             return new PatientCountVO(patientSearchComponent.count(visitNos, request.getFilters()));
         } catch (Exception e) {
@@ -36,12 +45,19 @@ public class PatientSearchServiceImpl implements PatientSearchService {
     @Override
     public PatientListVO list(PatientSearchRequest request) {
         validateRequest(request);
-        List<String> visitNos = searchV2Component.searchVisitNos(request.getExpression());
+        List<String> visitNos = searchV2Component.searchVisitNos(
+                request.getExpression(), getKeywordConfigUserId());
         try {
             return patientSearchComponent.list(visitNos, request);
         } catch (Exception e) {
             throw new BizException("患者列表查询失败: " + e.getMessage(), e);
         }
+    }
+
+    private Long getKeywordConfigUserId() {
+        return keywordConfigUserId != null && keywordConfigUserId > 0
+                ? keywordConfigUserId
+                : null;
     }
 
     private void validateRequest(PatientSearchRequest request) {

@@ -47,10 +47,13 @@ public class KeywordConfigServiceImpl extends CrudServiceImpl<KeywordConfigDao, 
 
     @Override
     public List<KeywordConfigDTO> getDefaultSearchFieldList() {
-        List<KeywordConfigDTO> list = this.baseDao.getDefaultSearchFieldList(SecurityUser.getUserId());
-        return list;
+        return getDefaultSearchFieldList(SecurityUser.getUserId());
     }
 
+    @Override
+    public List<KeywordConfigDTO> getDefaultSearchFieldList(Long userId) {
+        return this.baseDao.getDefaultSearchFieldList(userId);
+    }
 
     @Override
     public void saveKeywordConfig(KeywordConfigDTO dto) {
@@ -140,6 +143,4 @@ public class KeywordConfigServiceImpl extends CrudServiceImpl<KeywordConfigDao, 
         e.setIsConvert(0);
         e.setUserId(SecurityUser.getUserId());
     }
-
-
 }

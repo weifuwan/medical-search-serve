@@ -16,14 +16,21 @@ import java.util.List;
  */
 public interface KeywordConfigService extends CrudService<KeywordConfigEntity, KeywordConfigDTO> {
 
-
     /**
-     * 默认检索字段列表
+     * 获取当前登录用户可用的默认检索字段列表。
      *
-     * @return
+     * @return 检索字段列表
      */
     List<KeywordConfigDTO> getDefaultSearchFieldList();
 
+    /**
+     * 根据指定的配置所属用户获取可用检索字段列表。
+     * 用于不具备 Shiro 用户身份的服务端 API。
+     *
+     * @param userId 配置所属用户 ID
+     * @return 检索字段列表
+     */
+    List<KeywordConfigDTO> getDefaultSearchFieldList(Long userId);
 
     /**
      * 保存
@@ -57,7 +64,6 @@ public interface KeywordConfigService extends CrudService<KeywordConfigEntity, K
      * @param list
      */
     void saveBatch(ValidList<KeywordConfigDTO> list);
-
 
     /**
      * 获取需要待更新的配置id

@@ -16,6 +16,7 @@ server:
 medical-search:
   patient-api:
     token: ${MEDICAL_SEARCH_PATIENT_API_TOKEN:}
+    keyword-config-user-id: ${MEDICAL_SEARCH_PATIENT_API_KEYWORD_CONFIG_USER_ID:0}
 
 knife4j:
   enable: true

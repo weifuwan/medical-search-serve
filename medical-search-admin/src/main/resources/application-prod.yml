@@ -1,3 +1,8 @@
+medical-search:
+  patient-api:
+    # Keyword search fields are loaded from this user's saved keyword configuration.
+    keyword-config-user-id: 1952931360885829633
+
 spring:
   datasource:
     druid:
@@ -7,7 +12,7 @@ spring:
         login-password: nczxyy@1937
     dynamic:
       primary: master #设置默认的数据源或者数据源组,默认值即为master
-      strict: false #严格匹配数据源,默认false. true未匹配到指定数据源时抛异常,false使用默认数据源
+      strict: false #严格匹配数据源,默认false. true未匹配到指定数据源时使用默认数据源
       datasource:
         #本地库
         master:
@@ -47,7 +52,7 @@ custom:
   redis-open: true
   login-captcha-disabled: false
   #  file-path: /data/attach/ms
-  file-path: D:\\temp
+  file-path: D:\temp
   #单位（M）
   file-imageSize: 1
   # 用户默认密码
