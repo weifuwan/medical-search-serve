@@ -8,6 +8,7 @@ import com.jiayuan.common.utils.JsonUtils;
 import com.jiayuan.modules.log.entity.SysLogOperationEntity;
 import com.jiayuan.modules.log.enums.OperationStatusEnum;
 import com.jiayuan.modules.log.service.SysLogOperationService;
+import com.jiayuan.modules.security.filter.PatientApiTokenFilter;
 import com.jiayuan.modules.security.user.SecurityUser;
 import com.jiayuan.modules.security.user.UserDetail;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -72,21 +73,29 @@ public class LogOperationAspect {
             log.setOperation(annotation.value());
         }
 
-        //登录用户信息
-        UserDetail user = SecurityUser.getUser();
-        if (user != null) {
-            log.setCreatorName(user.getUserName());
+        // Record the fixed-token client as the operator; keep normal user logging unchanged.
+        HttpServletRequest request = HttpContextUtils.getHttpServletRequest();
+        Object apiClient = request == null ? null
+                : request.getAttribute(PatientApiTokenFilter.API_CLIENT_ATTRIBUTE);
+        if (apiClient != null) {
+            log.setCreatorName(apiClient.toString());
+        } else {
+            UserDetail user = SecurityUser.getUser();
+            if (user != null && user.getUserName() != null) {
+                log.setCreatorName(user.getUserName());
+            }
         }
 
         log.setStatus(status);
         log.setRequestTime((int) time);
 
         //请求相关信息
-        HttpServletRequest request = HttpContextUtils.getHttpServletRequest();
-        log.setIp(IpUtils.getIpAddr(request));
-        log.setUserAgent(request.getHeader(HttpHeaders.USER_AGENT));
-        log.setRequestUri(request.getRequestURI());
-        log.setRequestMethod(request.getMethod());
+        if (request != null) {
+            log.setIp(IpUtils.getIpAddr(request));
+            log.setUserAgent(request.getHeader(HttpHeaders.USER_AGENT));
+            log.setRequestUri(request.getRequestURI());
+            log.setRequestMethod(request.getMethod());
+        }
 
         //请求参数
         Object[] args = joinPoint.getArgs();
