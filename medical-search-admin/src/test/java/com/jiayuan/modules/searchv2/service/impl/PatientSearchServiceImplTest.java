@@ -3,6 +3,7 @@ package com.jiayuan.modules.searchv2.service.impl;
 import com.jiayuan.modules.searchv2.component.PatientSearchComponent;
 import com.jiayuan.modules.searchv2.component.SearchV2Component;
 import com.jiayuan.modules.searchv2.dto.PatientCountVO;
+import com.jiayuan.modules.searchv2.dto.PatientListVO;
 import com.jiayuan.modules.searchv2.dto.PatientSearchRequest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +32,24 @@ public class PatientSearchServiceImplTest {
 
     @InjectMocks
     private PatientSearchServiceImpl patientSearchService;
+
+    @Test
+    public void listPassesConfiguredKeywordOwnerToSearchPipeline() throws Exception {
+        ReflectionTestUtils.setField(patientSearchService, "keywordConfigUserId", CONFIG_USER_ID);
+
+        PatientSearchRequest request = new PatientSearchRequest();
+        request.setExpression("糖尿病");
+        PatientListVO expected = new PatientListVO(Collections.emptyList(), 0L, 1, 10);
+        when(searchV2Component.searchVisitNos("糖尿病", CONFIG_USER_ID))
+                .thenReturn(Collections.singletonList("VISIT-1"));
+        when(patientSearchComponent.list(Collections.singletonList("VISIT-1"), request))
+                .thenReturn(expected);
+
+        PatientListVO result = patientSearchService.list(request);
+
+        assertSame(expected, result);
+        verify(searchV2Component).searchVisitNos("糖尿病", CONFIG_USER_ID);
+    }
 
     @Test
     public void countPassesConfiguredKeywordOwnerToSearchPipeline() throws Exception {
