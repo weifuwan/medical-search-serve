@@ -84,6 +84,7 @@ public class ShiroConfig {
         // Shiro sees paths without the servlet context path (/medical-search-admin).
         filterMap.put("/patient/count", "patientApiToken");
         filterMap.put("/patient/list", "patientApiToken");
+        filterMap.put("/table/getTableInfo", "patientApiToken");
 
         // All other protected APIs keep the existing user-token authentication.
         filterMap.put("/**", "oauth2");
