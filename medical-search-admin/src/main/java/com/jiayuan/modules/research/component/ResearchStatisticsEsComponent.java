@@ -21,7 +21,6 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.metrics.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.joda.time.DateTimeZone;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -464,7 +463,7 @@ public class ResearchStatisticsEsComponent {
         return AggregationBuilders.dateHistogram(name)
                 .field(field)
                 .calendarInterval(dateInterval)
-                .timeZone(DateTimeZone.forID(BUSINESS_ZONE.getId()));
+                .timeZone(BUSINESS_ZONE);
     }
 
     private long totalHits(SearchResponse response) {
