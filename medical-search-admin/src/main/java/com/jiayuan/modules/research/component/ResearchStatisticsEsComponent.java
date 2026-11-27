@@ -112,6 +112,8 @@ public class ResearchStatisticsEsComponent {
 
     public Map<String, Object> visitTrend(ResearchStatisticsRequest request) {
         SearchResponse response = search(VISIT, dateQuery("visit_date", request),
+                cardinality("total_visits", "visit_no.keyword"),
+                cardinality("total_patients", "patient_id.keyword"),
                 dateHistogram("trend", "visit_date", request.getInterval())
                         .subAggregation(cardinality("visits", "visit_no.keyword"))
                         .subAggregation(cardinality("patients", "patient_id.keyword")),
@@ -426,10 +428,14 @@ public class ResearchStatisticsEsComponent {
         }
         org.elasticsearch.index.query.RangeQueryBuilder range = QueryBuilders.rangeQuery(dateField);
         if (request.getStartDate() != null) {
-            range.gte(request.getStartDate());
+            long startMillis = LocalDate.parse(request.getStartDate())
+                    .atStartOfDay(BUSINESS_ZONE).toInstant().toEpochMilli();
+            range.gte(startMillis);
         }
         if (request.getEndDate() != null) {
-            range.lt(LocalDate.parse(request.getEndDate()).plusDays(1).toString());
+            long endExclusiveMillis = LocalDate.parse(request.getEndDate()).plusDays(1)
+                    .atStartOfDay(BUSINESS_ZONE).toInstant().toEpochMilli();
+            range.lt(endExclusiveMillis);
         }
         query.filter(range);
     }
